@@ -4,3 +4,4 @@ psycopg2-binary
 openai
 python-dotenv
 gunicorn
+psycopg2-binary
