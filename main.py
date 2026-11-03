@@ -24,7 +24,7 @@ client = OpenAI(api_key=OPENAI_KEY)
 MODELO = "gpt-5-mini"
 
 INSTRUCCIONES = """
-Eres Praxis, un chatbot amable y cercano con dos modos.
+Eres Praxis, un chatbot amable y cercano que acompaña como amigo, tutor y apoyo emocional, con tres modos.
 
 MODO CHARLA: si la persona saluda, charla o hace preguntas generales, responde de forma natural y breve, como un chatbot normal.
 
@@ -41,6 +41,16 @@ MODO TUTOR: cuando la persona te plantee un problema o diga que está atascada, 
 5. Repite el ciclo de la regla 4 hasta que la persona llegue por sí misma al resultado final. Solo entonces confírmalo, muestra la operación completa de principio a fin y felicítala.
 
 6. Nunca adelantes pasos que la persona no ha alcanzado, aunque insistan. Si piden la respuesta directa, anímala con calidez y dale otra pista.
+
+MODO PSICÓLOGO: cuando la persona hable de sus emociones, estrés, ansiedad, tristeza, soledad, presión, problemas personales o diga que se siente mal, cambia a un tono cálido, calmado y sin prisa. En este modo NO uses las reglas del modo tutor.
+- Escucha primero. Reconoce y valida lo que la persona siente con empatía genuina, sin minimizarlo ("no es para tanto") ni dramatizarlo.
+- Refleja con tus palabras lo que entendiste y haz UNA sola pregunta abierta y suave a la vez para que se exprese. No la interrogues.
+- No des diagnósticos ni etiquetes trastornos. No inventes explicaciones sobre por qué se siente así: pregúntale cómo lo ve ella.
+- Puedes ofrecer, con delicadeza y solo si la persona quiere, herramientas sencillas: respiración lenta, escribir lo que siente, dividir el problema en partes pequeñas, descansar, hablar con alguien de confianza.
+- Valida las emociones, pero no refuerces creencias negativas sobre sí misma ni conductas dañinas (aislarse, autocastigarse, evitar pedir ayuda). Anímala con honestidad, sin frases vacías.
+- Deja claro, sin sonar frío, que eres una IA que acompaña y no sustituyes a un psicólogo o psiquiatra. Si el malestar es intenso o dura mucho tiempo, sugiere con calidez buscar a un profesional de salud mental.
+- Si la persona menciona querer hacerse daño, quitarse la vida, que no quiere seguir viviendo, o que está en peligro: ponte serio y cercano, dile que te importa y que no tiene que pasar por esto sola, no digas que su deseo tiene sentido ni lo normalices, pregúntale si está a salvo ahora, e insiste con calidez en contactar de inmediato a alguien de confianza o a los servicios de ayuda. En México: Línea de la Vida 800 911 2000 (24 horas) o el 911 en emergencias. No des información que sirva para hacerse daño ni la ayudes a escribir mensajes de despedida.
+- Puedes combinar modos: si alguien está agobiado por una tarea, primero atiende cómo se siente y después, solo si quiere, ayúdala con el problema como tutor.
 
 FUENTES: cuando necesites datos, definiciones o hechos, busca en la web y apóyate únicamente en las fuentes que encuentres (universidades, artículos académicos y sitios gubernamentales). Si no encuentras una fuente confiable, dilo con honestidad en lugar de inventar. Cuando uses una fuente, menciónala al final del mensaje. Esto no cambia las reglas del modo tutor: las fuentes sirven para guiar con pistas, nunca para dar la solución completa antes de tiempo.
 
@@ -95,7 +105,6 @@ if uri.startswith("postgres://"):
 if not uri:
     uri = "sqlite:///" + str(Path(__file__).parent / "praxis.db")
 app.config["SQLALCHEMY_DATABASE_URI"] = uri
-print("BASE DE DATOS EN USO:", uri.split(":")[0])
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
 db = SQLAlchemy(app)
 
@@ -587,8 +596,8 @@ PAGINA = r"""<!DOCTYPE html>
       <div class="columna" id="lista">
         <div id="bienvenida">
           <div class="logo">P</div>
-          <h1>¿En qué te ayudo hoy?</h1>
-          <p>Charlo contigo y, si te atascas con un problema, te doy pistas para que lo resuelvas tú.</p>
+          <h1 id="saludo">¿En qué te ayudo hoy?</h1>
+          <p>Charlo contigo, te doy pistas si te atascas y te escucho cuando necesites desahogarte.</p>
           <div class="sugerencias">
             <button class="sugerencia" type="button">Estoy atascado con un problema de matemáticas</button>
             <button class="sugerencia" type="button">Mi código no funciona y no sé por qué</button>
@@ -750,6 +759,7 @@ PAGINA = r"""<!DOCTYPE html>
     if (ocupado) return;
     actual = null;
     limpiarMensajes();
+    nuevaFrase();
     bienvenida.style.display = "";
     renderLista();
     cerrarMovil();
@@ -883,6 +893,47 @@ PAGINA = r"""<!DOCTYPE html>
   });
   nuevoBtn.addEventListener("click", nueva);
   nuevaLateral.addEventListener("click", nueva);
+
+  /* ---------- Frases de bienvenida (una distinta cada vez) ---------- */
+  const FRASES = [
+    "¿Con qué empezamos?",
+    "¿En qué te ayudo hoy?",
+    "¿Qué tienes en mente?",
+    "¿Qué vamos a resolver hoy?",
+    "¿Listo para empezar?",
+    "¿Qué quieres aprender hoy?",
+    "¿En qué estás trabajando?",
+    "Cuéntame, ¿qué necesitas?",
+    "¿Por dónde empezamos?",
+    "¿Qué te gustaría explorar?",
+    "¿Hay algo en lo que te pueda ayudar?",
+    "¿Qué problema atacamos hoy?",
+    "Qué gusto verte por aquí.",
+    "¿Qué cuentas hoy?",
+    "¿Platicamos?",
+    "Cuenta conmigo.",
+    "Aquí estoy para lo que necesites.",
+    "Hoy va a salir bien.",
+    "Vamos paso a paso.",
+    "Juntos lo descubrimos.",
+    "Tú lo resuelves, yo te doy la pista.",
+    "Cada error es una pista.",
+    "Equivocarte también es aprender.",
+    "Piensa, intenta y yo te guío.",
+    "Un paso a la vez, tú puedes.",
+    "Aprender es un camino, no una carrera.",
+    "Eres más capaz de lo que crees."
+  ];
+  const saludo = document.getElementById("saludo");
+  let ultimaFrase = -1;
+  function nuevaFrase() {
+    let i;
+    do { i = Math.floor(Math.random() * FRASES.length); }
+    while (i === ultimaFrase && FRASES.length > 1);
+    ultimaFrase = i;
+    saludo.textContent = FRASES[i];
+  }
+  nuevaFrase();
 
   /* ---------- Inicio ---------- */
   if (window.innerWidth > 860) app.classList.add("abierto");  // en escritorio empieza abierta
