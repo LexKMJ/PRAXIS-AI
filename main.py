@@ -95,6 +95,7 @@ if uri.startswith("postgres://"):
 if not uri:
     uri = "sqlite:///" + str(Path(__file__).parent / "praxis.db")
 app.config["SQLALCHEMY_DATABASE_URI"] = uri
+print("BASE DE DATOS EN USO:", uri.split(":")[0])
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
 db = SQLAlchemy(app)
 
