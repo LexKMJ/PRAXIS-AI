@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Praxis · Aprende resolviendo</title>
+<meta name="description" content="Praxis es un tutor con IA que te da pistas para que resuelvas tú mismo tus problemas.">
+<link rel="icon" href="/static/praxis.png">
+<meta name="theme-color" content="#000000">
+<style>
+  :root {
+    --bg: #000000;
+    --panel: #1c1c1e;
+    --panel-hover: #2a2a2d;
+    --text: #ffffff;
+    --muted: #a1a1a6;
+    --pill-light: #ffffff;
+    --pill-light-text: #0b0b0c;
+    --accent: #8b85ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* ---------- Navegación ---------- */
+  nav {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 36px;
+    padding: 18px clamp(20px, 3vw, 52px);
+    background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(12px);
+  }
+  .marca { display: flex; align-items: center; gap: 10px; font-size: 26px; font-weight: 650; letter-spacing: -0.02em; }
+  .marca img {
+    width: 30px; height: 30px; border-radius: 9px; object-fit: cover; background: #4f46e5;
+  }
+  .enlaces { display: flex; align-items: center; gap: 30px; font-size: 16px; font-weight: 500; }
+  .enlaces a { color: var(--text); opacity: 0.92; }
+  .enlaces a:hover { opacity: 1; color: var(--muted); }
+  .acciones { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .pill {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 22px; border-radius: 999px; border: 0; cursor: pointer;
+    font: inherit; font-size: 16px; font-weight: 500;
+    background: var(--panel); color: var(--text); transition: background 0.2s, transform 0.2s;
+  }
+  .pill:hover { background: var(--panel-hover); }
+  .pill.claro { background: var(--pill-light); color: var(--pill-light-text); }
+  .pill.claro:hover { background: #e3e3e6; }
+  .pill svg { width: 15px; height: 15px; }
+  .solo-movil { display: none; }
+  #boton-menu {
+    display: none; width: 42px; height: 42px; border-radius: 50%; border: 0;
+    background: var(--panel); color: var(--text); cursor: pointer; place-items: center;
+  }
+  #boton-menu svg { width: 20px; height: 20px; }
+
+  /* ---------- Portada ---------- */
+  .portada {
+    min-height: calc(100dvh - 70px); display: flex; flex-direction: column; justify-content: space-between;
+    padding: 0 clamp(20px, 3vw, 52px) 48px;
+  }
+  .centro { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 0; }
+  h1 {
+    margin: 0 0 40px; max-width: 16ch; font-weight: 500;
+    font-size: clamp(40px, 7.2vw, 96px); line-height: 1.05; letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+  .botones { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
+  .botones .pill { padding: 16px 30px; font-size: 18px; }
+  .entra { animation: sube 0.7s ease both; }
+  .entra.d2 { animation-delay: 0.12s; }
+  .entra.d3 { animation-delay: 0.24s; }
+  @keyframes sube { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+  /* Fila de temas (en lugar de logos de empresas) */
+  .temas {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px 40px;
+    padding-top: 40px;
+  }
+  .tema {
+    font-size: clamp(22px, 3vw, 38px); font-weight: 650; letter-spacing: -0.03em;
+    color: var(--text); opacity: 0.9;
+  }
+  .tema.mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; letter-spacing: -0.04em; }
+  .tema.ancho { letter-spacing: 0.12em; font-weight: 700; }
+  .tema.fino { font-weight: 300; letter-spacing: -0.02em; }
+
+  /* ---------- Cómo funciona ---------- */
+  .seccion { padding: 110px clamp(20px, 3vw, 52px); max-width: 1180px; margin: 0 auto; }
+  .seccion h2 { margin: 0 0 14px; font-size: clamp(30px, 4.4vw, 54px); font-weight: 500; letter-spacing: -0.03em; line-height: 1.1; }
+  .seccion .intro { margin: 0 0 54px; color: var(--muted); font-size: 19px; max-width: 56ch; }
+  .pasos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .paso { background: var(--panel); border-radius: 24px; padding: 30px; }
+  .paso .num {
+    width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent); color: #0b0b0c; font-weight: 700; margin-bottom: 22px;
+  }
+  .paso h3 { margin: 0 0 8px; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+  .paso p { margin: 0; color: var(--muted); }
+
+  .cierre { text-align: center; padding: 40px 20px 110px; }
+  .cierre h2 { margin: 0 0 28px; font-size: clamp(30px, 4.4vw, 54px); font-weight: 500; letter-spacing: -0.03em; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; padding: 0 20px 40px; }
+
+  /* ---------- Celular ---------- */
+  @media (max-width: 960px) {
+    .enlaces {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; align-items: flex-start; gap: 4px;
+      padding: 12px 20px 24px; background: #000; border-bottom: 1px solid #222;
+    }
+    .enlaces a { padding: 12px 0; width: 100%; font-size: 18px; }
+    nav.abierto .enlaces { display: flex; }
+    #boton-menu { display: grid; }
+    .acciones .oculto-movil { display: none; }
+    .enlaces a.solo-movil { display: block; }
+    .pasos { grid-template-columns: 1fr; }
+    .temas { justify-content: center; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .entra { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <a class="marca" href="/">
+    <img src="/static/praxis.png" alt="" onerror="this.style.visibility='hidden'">
+    Praxis
+  </a>
+  <div class="enlaces" id="enlaces">
+    <a href="#como">Cómo funciona</a>
+    <a href="#temas">Materias</a>
+    <a href="#como">Para estudiantes</a>
+    <a href="#como">Para docentes</a>
+    <a href="#contacto">Contacto</a>
+    <a class="solo-movil" href="__ENLACE_SESION__">__TEXTO_SESION__</a>
+  </div>
+  <div class="acciones">
+    <a class="pill oculto-movil" href="__ENLACE_SESION__">
+      __TEXTO_SESION__
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </a>
+    <a class="pill claro" href="/app">
+      Probar Praxis
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M8 7h9v9"/></svg>
+    </a>
+    <button id="boton-menu" type="button" aria-label="Abrir menú" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </div>
+</nav>
+
+<main>
+  <section class="portada">
+    <div class="centro">
+      <h1 class="entra">Aprende a resolver tus propios problemas con Praxis</h1>
+      <div class="botones entra d2">
+        <a class="pill claro" href="/login">Empezar ahora</a>
+        <a class="pill" href="#como">
+          Cómo funciona
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div class="temas entra d3" id="temas" aria-label="Materias en las que Praxis te ayuda">
+      <span class="tema">Matemáticas</span>
+      <span class="tema mono">&lt;Código/&gt;</span>
+      <span class="tema fino">Física</span>
+      <span class="tema">Química</span>
+      <span class="tema ancho">CIENCIAS</span>
+    </div>
+  </section>
+
+  <section class="seccion" id="como">
+    <h2>Un tutor que te da pistas, no respuestas</h2>
+    <p class="intro">Praxis charla contigo como cualquier chatbot, pero cuando te atascas con un problema te guía paso a paso para que llegues tú al resultado.</p>
+    <div class="pasos">
+      <div class="paso">
+        <div class="num">1</div>
+        <h3>Cuéntale tu problema</h3>
+        <p>Escribe el ejercicio o lo que no te sale. Praxis responde con una primera pista suave.</p>
+      </div>
+      <div class="paso">
+        <div class="num">2</div>
+        <h3>Intenta y responde</h3>
+        <p>Te dice si vas bien o mal y te da una pista nueva, sin resolverte el paso.</p>
+      </div>
+      <div class="paso">
+        <div class="num">3</div>
+        <h3>Llega tú al resultado</h3>
+        <p>Al final ves la operación completa de principio a fin y entiendes cómo lo lograste.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cierre" id="contacto">
+    <h2>¿Listo para atascarte menos?</h2>
+    <a class="pill claro" href="/login" style="padding:16px 30px;font-size:18px">Crear mi cuenta</a>
+  </section>
+</main>
+
+<footer>Praxis puede equivocarse. Verifica la información importante.</footer>
+
+<script>
+  const nav = document.getElementById("nav");
+  const boton = document.getElementById("boton-menu");
+  boton.addEventListener("click", () => {
+    const abierto = nav.classList.toggle("abierto");
+    boton.setAttribute("aria-expanded", String(abierto));
+  });
+  // Cierra el menú del celular al elegir una opción
+  document.querySelectorAll("#enlaces a").forEach((a) =>
+    a.addEventListener("click", () => {
+      nav.classList.remove("abierto");
+      boton.setAttribute("aria-expanded", "false");
+    })
+  );
+</script>
+</body>
+</html>
