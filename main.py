@@ -9,7 +9,7 @@ from datetime import timedelta
 from functools import wraps
 from pathlib import Path
 
-from flask import Flask, request, jsonify, Response, session, redirect
+from flask import Flask, request, jsonify, Response, session, redirect, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -278,7 +278,7 @@ LOGIN = r"""<!DOCTYPE html>
         body: JSON.stringify(cuerpo)
       });
       const d = await r.json();
-      if (r.ok) { location.href = "/"; return; }
+      if (r.ok) { location.href = "/app"; return; }
       $("error").textContent = d.error || "No se pudo completar la solicitud.";
     } catch (err) {
       $("error").textContent = "No se pudo conectar con el servidor. Inténtalo de nuevo.";
@@ -950,6 +950,19 @@ PAGINA = r"""<!DOCTYPE html>
 # --- Rutas de páginas ---
 @app.route("/")
 def inicio():
+    # Página de inicio pública. Si ya iniciaste sesión, el botón muestra tu nombre.
+    u = usuario_actual()
+    pagina = (Path(__file__).parent / "landing.html").read_text(encoding="utf-8")
+    if u:
+        enlace, texto = "/app", "Hola, " + html.escape(u.nombre)
+    else:
+        enlace, texto = "/login", "Iniciar sesión"
+    return pagina.replace("__ENLACE_SESION__", enlace).replace("__TEXTO_SESION__", texto)
+
+
+@app.route("/app")
+def pagina_app():
+    # El chat. Sin sesión te manda a iniciar sesión; con sesión entras directo.
     u = usuario_actual()
     if not u:
         return redirect("/login")
@@ -959,7 +972,7 @@ def inicio():
 @app.route("/login")
 def pagina_login():
     if usuario_actual():
-        return redirect("/")
+        return redirect("/app")
     return LOGIN
 
 
@@ -1164,12 +1177,20 @@ def chat():
         return jsonify(respuesta="Ocurrió un error al contactar a la IA. Inténtalo de nuevo en un momento."), 500
 
 
+@app.route("/favicon.ico")
+def favicon():
+    # Algunos navegadores piden /favicon.ico por su cuenta
+    return send_from_directory(
+        Path(__file__).parent / "static", "praxis.png", mimetype="image/png"
+    )
+
+
 @app.route("/manifest.json")
 def manifest():
     return jsonify(
         name="Praxis",
         short_name="Praxis",
-        start_url="/",
+        start_url="/app",
         display="standalone",
         background_color="#ffffff",
         theme_color="#4f46e5",
