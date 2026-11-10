@@ -16,7 +16,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# --- Cargar la clave desde el .env ---
 load_dotenv(Path(__file__).parent / ".env", override=True)
 OPENAI_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 client = OpenAI(api_key=OPENAI_KEY)
@@ -42,23 +41,11 @@ MODO TUTOR: cuando la persona te plantee un problema o diga que está atascada, 
 
 6. Nunca adelantes pasos que la persona no ha alcanzado, aunque insistan. Si piden la respuesta directa, anímala con calidez y dale otra pista.
 
-MODO PSICÓLOGO: cuando la persona hable de sus emociones, estrés, ansiedad, tristeza, soledad, presión, problemas personales o diga que se siente mal, cambia a un tono cálido, calmado y sin prisa. En este modo NO uses las reglas del modo tutor.
-- Escucha primero. Reconoce y valida lo que la persona siente con empatía genuina, sin minimizarlo ("no es para tanto") ni dramatizarlo.
-- Refleja con tus palabras lo que entendiste y haz UNA sola pregunta abierta y suave a la vez para que se exprese. No la interrogues.
-- No des diagnósticos ni etiquetes trastornos. No inventes explicaciones sobre por qué se siente así: pregúntale cómo lo ve ella.
-- Puedes ofrecer, con delicadeza y solo si la persona quiere, herramientas sencillas: respiración lenta, escribir lo que siente, dividir el problema en partes pequeñas, descansar, hablar con alguien de confianza.
-- Valida las emociones, pero no refuerces creencias negativas sobre sí misma ni conductas dañinas (aislarse, autocastigarse, evitar pedir ayuda). Anímala con honestidad, sin frases vacías.
-- Deja claro, sin sonar frío, que eres una IA que acompaña y no sustituyes a un psicólogo o psiquiatra. Si el malestar es intenso o dura mucho tiempo, sugiere con calidez buscar a un profesional de salud mental.
-- Si la persona menciona querer hacerse daño, quitarse la vida, que no quiere seguir viviendo, o que está en peligro: ponte serio y cercano, dile que te importa y que no tiene que pasar por esto sola, no digas que su deseo tiene sentido ni lo normalices, pregúntale si está a salvo ahora, e insiste con calidez en contactar de inmediato a alguien de confianza o a los servicios de ayuda. En México: Línea de la Vida 800 911 2000 (24 horas) o el 911 en emergencias. No des información que sirva para hacerse daño ni la ayudes a escribir mensajes de despedida.
-- Puedes combinar modos: si alguien está agobiado por una tarea, primero atiende cómo se siente y después, solo si quiere, ayúdala con el problema como tutor.
-
 FUENTES: cuando necesites datos, definiciones o hechos, busca en la web y apóyate únicamente en las fuentes que encuentres (universidades, artículos académicos y sitios gubernamentales). Si no encuentras una fuente confiable, dilo con honestidad en lugar de inventar. Cuando uses una fuente, menciónala al final del mensaje. Esto no cambia las reglas del modo tutor: las fuentes sirven para guiar con pistas, nunca para dar la solución completa antes de tiempo.
 
 Responde en el idioma de la persona, por defecto en español, con mensajes breves y motivadores.
 """
 
-# --- Solo se busca en estos sitios (universidades, artículos, gobierno) ---
-# Importante: OpenAI solo acepta dominios completos (no "gov" ni "edu" sueltos).
 DOMINIOS_PERMITIDOS = [
     # Gubernamentales
     "gob.mx", "inegi.org.mx", "conahcyt.mx", "gob.es", "gov.uk",
@@ -80,7 +67,7 @@ DOMINIOS_PERMITIDOS = [
 app = Flask(__name__)
 
 # --- Seguridad de las sesiones ---
-# En Render define la variable de entorno SECRET_KEY con un texto largo y aleatorio.
+
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
 if not SECRET_KEY:
     print("AVISO: define la variable de entorno SECRET_KEY (ver instrucciones).")
@@ -127,7 +114,7 @@ class Conversacion(db.Model):
 with app.app_context():
     try:
         db.create_all()
-    except Exception as error:   # por si dos procesos crean las tablas a la vez
+    except Exception as error:  
         print("create_all:", error)
 
 
@@ -147,7 +134,7 @@ def login_api(f):
 
 
 # Límite sencillo de intentos (en memoria) contra contraseñas adivinadas por fuerza bruta
-_INTENTOS = {}
+_INTENTOS = {5}
 
 def _ip():
     return (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
