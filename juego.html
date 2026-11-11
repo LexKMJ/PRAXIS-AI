@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Praxis · Modo juego</title>
+<title>Praxis · Refuerza tus conocimientos</title>
 <link rel="icon" href="/praxis.png">
 <meta name="theme-color" content="#14131f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -115,7 +115,34 @@
   .fallo button { border: 0; border-radius: 999px; padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer; background: var(--panel2); color: var(--text); }
   .fallo button:hover { background: #3a3960; }
   .acciones-final { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 26px; }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+  .pal { display: inline-block; opacity: 0; transform: translateY(.6em); filter: blur(6px); }
+  .anim-on .pal { animation: palSube .6s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+  @keyframes palSube { from { opacity: 0; transform: translateY(.6em); filter: blur(6px); } to { opacity: 1; transform: none; filter: blur(0); } }
+
+  .cj { padding: 18px; border-radius: 28px; background: var(--panel); border: 1px solid var(--borde); }
+  .cj-msgs { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding: 2px 2px 8px; }
+  .cj-b { max-width: 88%; padding: 11px 16px; border-radius: 20px; font-size: 16px; line-height: 1.45; animation: cjIn .35s ease both; overflow-wrap: anywhere; }
+  @keyframes cjIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .cj-b.bot { align-self: flex-start; background: var(--panel2); border-radius: 6px 20px 20px 20px; }
+  .cj-b.yo { align-self: flex-end; background: var(--indigo); border-radius: 20px 20px 6px 20px; }
+  .cj-b .pts { display: inline-flex; gap: 5px; padding: 4px 0; }
+  .cj-b .pts i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: salto 1.1s infinite ease-in-out; }
+  .cj-b .pts i:nth-child(2) { animation-delay: .15s; } .cj-b .pts i:nth-child(3) { animation-delay: .3s; }
+  @keyframes salto { 0%, 60%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-4px); } }
+  .cj-sug { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+  .cj-sug button { border: 1px solid var(--borde); background: #1b1a2d; color: var(--text); border-radius: 999px; padding: 7px 14px; font-size: 14px; cursor: pointer; transition: border-color .2s, transform .2s; }
+  .cj-sug button:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .cj-form { display: flex; align-items: flex-end; gap: 6px; margin-top: 10px; padding: 6px 6px 6px 16px; border-radius: 26px; background: #1b1a2d; border: 1px solid var(--borde); }
+  .cj-form:focus-within { border-color: var(--accent); }
+  .cj-form textarea { flex: 1; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; resize: none; max-height: 120px; padding: 9px 0; line-height: 1.4; }
+  .cj-form textarea::placeholder { color: var(--muted); }
+  .cj-ic { flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer; font-size: 17px; }
+  #cj-mic { background: transparent; color: var(--muted); } #cj-mic:hover { background: var(--panel2); color: var(--text); }
+  #cj-mic.escuchando { background: #e5484d; color: #fff; }
+  #cj-enviar { background: #fff; color: #0b0b0c; font-weight: 700; } #cj-enviar:disabled { opacity: .3; cursor: not-allowed; }
+  .o-sep { text-align: center; color: var(--muted); font-size: 14px; margin: 18px 0 -6px; }
+  @media (prefers-reduced-motion: reduce) { .pal { opacity: 1; transform: none; filter: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
@@ -130,7 +157,7 @@
     </nav>
     <div class="hero">
       <p class="mano">practica jugando ✎</p>
-      <h1>Sube tu <em>racha</em>, aprende más</h1>
+      <h1 id="titulo-juego" class="anim-on">Sube tu <em>racha</em>, aprende más</h1>
       <p class="sub">Lecciones de 8 preguntas de matemáticas, metrología, dibujo técnico, PLC, CNC y más. Si fallas, te explico por qué.</p>
     </div>
 
@@ -146,6 +173,22 @@
       </div>
     </div>
 
+    <h2 class="sec">cuéntame qué quieres practicar</h2>
+    <div class="cj">
+      <div class="cj-msgs" id="cj-msgs"></div>
+      <div class="cj-sug" id="cj-sug">
+        <button type="button">Códigos G y M del torno</button>
+        <button type="button">Ladder con temporizadores</button>
+        <button type="button">Tolerancias y ajustes</button>
+        <button type="button">Derivadas e integrales</button>
+      </div>
+      <form class="cj-form" id="cj-form">
+        <textarea id="cj-texto" rows="1" maxlength="200" placeholder="Escribe o dicta el tema que quieres practicar..."></textarea>
+        <button class="cj-ic" id="cj-mic" type="button" aria-label="Dictar por voz">🎤</button>
+        <button class="cj-ic" id="cj-enviar" type="submit" aria-label="Armar lección" disabled>➤</button>
+      </form>
+    </div>
+    <p class="o-sep">o elige uno de la lista</p>
     <h2 class="sec">elige un tema</h2>
     <div class="cats" id="cats"></div>
     <div class="empezar"><button class="pill claro grande" id="empezar" type="button">Empezar lección</button></div>
@@ -206,6 +249,25 @@
   const $ = (id) => document.getElementById(id);
   const LS = "praxis_progreso";
   const VIDAS = 5, POR_LECCION = 8;
+  function animaPalabras(el) {
+    let i = 0;
+    (function recorre(nodo) {
+      [...nodo.childNodes].forEach((n) => {
+        if (n.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          n.textContent.split(/(\s+)/).forEach((p) => {
+            if (!p) return;
+            if (/^\s+$/.test(p)) { frag.appendChild(document.createTextNode(p)); return; }
+            const sp = document.createElement("span"); sp.className = "pal";
+            sp.style.setProperty("--i", Math.min(i++, 14)); sp.textContent = p; frag.appendChild(sp);
+          });
+          n.replaceWith(frag);
+        } else if (n.nodeType === 1) recorre(n);
+      });
+    })(el);
+  }
+  animaPalabras($("titulo-juego"));
+
 
   const iso = (d) => { const z = (n) => String(n).padStart(2, "0"); return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate()); };
   const hoyL = () => iso(new Date()), ayerL = () => iso(new Date(Date.now() - 864e5));
@@ -298,17 +360,78 @@
 
   let preguntas = [], idx = 0, aciertos = 0, vidas = VIDAS, errores = [], elegida = -1, revisada = false;
 
+  let ultimoTema = "";
+  function iniciarCon(lista) {
+    preguntas = lista;
+    idx = 0; aciertos = 0; vidas = VIDAS; errores = [];
+    ver("leccion"); mostrar();
+  }
   async function empezar() {
+    ultimoTema = "";
     $("empezar").disabled = true;
+    let lista = [];
     try {
       const r = await fetch("/api/juego/preguntas?cat=" + encodeURIComponent(categoria) + "&n=" + POR_LECCION);
       if (r.status === 401) { location.href = "/login"; return; }
-      preguntas = await r.json();
-    } catch (e) { preguntas = []; }
+      lista = await r.json();
+    } catch (e) { lista = []; }
     $("empezar").disabled = false;
-    if (!preguntas.length) { alert("No pude cargar las preguntas. Inténtalo de nuevo."); return; }
-    idx = 0; aciertos = 0; vidas = VIDAS; errores = [];
-    ver("leccion"); mostrar();
+    if (!Array.isArray(lista) || !lista.length) { alert("No pude cargar las preguntas. Inténtalo de nuevo."); return; }
+    iniciarCon(lista);
+  }
+  async function pedirTema(tema) {
+    const r = await fetch("/api/juego/generar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tema, n: POR_LECCION }) });
+    if (r.status === 401) { location.href = "/login"; return null; }
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "No pude armar tu lección.");
+    return d;
+  }
+
+  const cjMsgs = $("cj-msgs"), cjTexto = $("cj-texto"), cjEnviar = $("cj-enviar");
+  let cjOcupado = false;
+  function cjBurbuja(rol, html) {
+    const b = document.createElement("div"); b.className = "cj-b " + rol;
+    if (html === "...") b.innerHTML = '<span class="pts"><i></i><i></i><i></i></span>'; else b.textContent = html;
+    cjMsgs.appendChild(b); cjMsgs.scrollTop = cjMsgs.scrollHeight; return b;
+  }
+  function cjActualizar() { cjEnviar.disabled = cjOcupado || cjTexto.value.trim().length < 3; }
+  async function cjMandar(tema) {
+    tema = tema.trim();
+    if (tema.length < 3 || cjOcupado) return;
+    cjOcupado = true; cjTexto.value = ""; cjTexto.style.height = "auto"; cjActualizar();
+    cjBurbuja("yo", tema);
+    const espera = cjBurbuja("bot", "...");
+    try {
+      const lista = await pedirTema(tema);
+      if (!lista) return;
+      espera.textContent = "¡Va! Armé una lección de " + lista.length + " preguntas sobre «" + tema + "». Si fallas, lo repasamos juntos.";
+      ultimoTema = tema;
+      setTimeout(() => iniciarCon(lista), 1100);
+    } catch (e) {
+      espera.textContent = e.message || "No pude armar tu lección. Inténtalo de nuevo.";
+    }
+    cjOcupado = false; cjActualizar();
+  }
+  cjBurbuja("bot", "¡Hola! ¿Sobre qué quieres jugar hoy? Cuéntame con tus palabras el tema o la materia y armamos juntos una lección. Todo cuenta para tu racha.");
+  $("cj-form").addEventListener("submit", (e) => { e.preventDefault(); cjMandar(cjTexto.value); });
+  cjTexto.addEventListener("input", () => { cjTexto.style.height = "auto"; cjTexto.style.height = Math.min(cjTexto.scrollHeight, 120) + "px"; cjActualizar(); });
+  cjTexto.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("cj-form").requestSubmit(); } });
+  document.querySelectorAll("#cj-sug button").forEach((b) => b.addEventListener("click", () => cjMandar(b.textContent)));
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { $("cj-mic").style.display = "none"; }
+  else {
+    const rec = new SR(); rec.lang = "es-MX"; rec.interimResults = true; let oyendo = false;
+    rec.onstart = () => { oyendo = true; $("cj-mic").classList.add("escuchando"); };
+    rec.onresult = (e) => { let t = ""; for (const r of e.results) t += r[0].transcript; cjTexto.value = t; cjActualizar(); };
+    rec.onend = () => { oyendo = false; $("cj-mic").classList.remove("escuchando"); };
+    $("cj-mic").addEventListener("click", () => { try { oyendo ? rec.stop() : rec.start(); } catch (e) {} });
+  }
+
+  async function otraLeccion() {
+    pintarProgreso();
+    if (!ultimoTema) { empezar(); return; }
+    try { iniciarCon(await pedirTema(ultimoTema)); }
+    catch (e) { alert(e.message || "No pude armar otra lección."); ver("inicio"); }
   }
 
   function mostrar() {
@@ -407,7 +530,7 @@
     });
     sonFin(); ver("final");
   }
-  $("otra").addEventListener("click", () => { pintarProgreso(); empezar(); });
+  $("otra").addEventListener("click", otraLeccion);
   $("volver").addEventListener("click", () => { pintarProgreso(); ver("inicio"); });
   $("empezar").addEventListener("click", empezar);
 
