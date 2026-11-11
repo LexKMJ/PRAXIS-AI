@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Praxis</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/praxis.png">
+<meta name="theme-color" content="#14131f">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=DM+Sans:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14131f; --panel: #24233a; --panel2: #2f2e4a; --borde: #2d2c40; --text: #fff;
+    --muted: #a1a1a6; --accent: #8b85ff; --indigo: #4f46e5; --lat: 292px;
+    --serif: "Fraunces", Georgia, serif; --sans: "DM Sans", system-ui, sans-serif;
+    --mano: "Caveat", cursive; --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; color: var(--text); font-family: var(--sans); font-size: 16px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased; background: #0e0d17;
+  }
+  button { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #app {
+    height: 100dvh; display: flex; overflow: hidden;
+    background: radial-gradient(70% 40% at 55% 0%, rgba(79,70,229,.30), transparent 70%),
+                linear-gradient(180deg, #1c1b4d 0%, #14131f 45%, #0e0d17 100%);
+  }
+
+  #lateral {
+    width: var(--lat); flex: none; display: flex; flex-direction: column;
+    background: rgba(20,19,31,.82); backdrop-filter: blur(12px); border-right: 1px solid var(--borde);
+    padding: calc(14px + env(safe-area-inset-top, 0px)) 14px calc(14px + env(safe-area-inset-bottom, 0px));
+    transition: transform .3s ease, margin-left .3s ease;
+  }
+  #velo { display: none; }
+  .btn-nueva {
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    background: #fff; color: #0b0b0c; border: 0; padding: 12px; border-radius: 999px;
+    font-size: 15px; font-weight: 600; cursor: pointer; transition: background .2s, transform .2s;
+  }
+  .btn-nueva:hover { background: #e3e3e6; transform: translateY(-1px); }
+  .btn-nueva svg { width: 16px; height: 16px; }
+  .btn-juego {
+    display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 12px 14px; border-radius: 16px;
+    text-decoration: none; color: var(--text); font-weight: 600; font-size: 15px;
+    background: linear-gradient(135deg, rgba(79,70,229,.55), rgba(139,133,255,.25)); border: 1px solid rgba(139,133,255,.5);
+    transition: transform .2s, border-color .2s;
+  }
+  .btn-juego:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .btn-juego small { display: block; font-weight: 400; color: #cfcdf5; font-size: 12px; }
+  .titulo-lista { margin: 20px 6px 8px; font-family: var(--mano); font-size: 22px; color: var(--accent); }
+  #historial { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+  #vacio { color: var(--muted); font-size: 14px; padding: 6px; }
+  .item { display: flex; align-items: center; border-radius: 12px; max-height: 48px; overflow: hidden;
+          transition: max-height .28s ease, opacity .28s ease, background .15s; }
+  .item:hover { background: var(--panel); }
+  .item.activo { background: var(--panel2); }
+  .item.nuevo { animation: entraItem .35s ease; }
+  .item.saliendo { max-height: 0; opacity: 0; }
+  @keyframes entraItem { from { opacity: 0; transform: translateX(-14px); max-height: 0; } to { opacity: 1; transform: none; max-height: 48px; } }
+  .item .abrir { flex: 1; min-width: 0; text-align: left; background: transparent; border: 0; color: var(--text);
+                 padding: 10px 12px; font-size: 15px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item.activo .abrir { color: var(--accent); font-weight: 600; }
+  .item .borrar { flex: none; width: 32px; height: 32px; margin-right: 4px; border: 0; border-radius: 8px;
+                  background: transparent; color: var(--muted); font-size: 18px; cursor: pointer; line-height: 1; }
+  .item .borrar:hover { background: var(--bg); color: #ff6b6b; }
+  @media (hover: hover) { .item .borrar { opacity: 0; transition: opacity .15s; } .item:hover .borrar, .item:focus-within .borrar { opacity: 1; } }
+  .borrar-todo { margin-top: 6px; background: transparent; border: 0; color: var(--muted); font-size: 13px; cursor: pointer; padding: 8px 6px; text-align: left; }
+  .borrar-todo:hover { color: #ff6b6b; }
+  .aviso-inv { margin: 8px 0 0; padding: 10px 12px; border-radius: 14px; background: rgba(139,133,255,.12); color: #cfcdf5; font-size: 13px; }
+  .aviso-inv[hidden] { display: none; }
+  .usuario { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--borde); }
+  .usuario .nombre { font-size: 14px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #salir { flex: none; background: var(--panel); border: 0; color: var(--text); border-radius: 999px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+  #salir:hover { background: var(--panel2); }
+  @media (min-width: 861px) { #app:not(.abierto) #lateral { margin-left: calc(var(--lat) * -1); } }
+  @media (max-width: 860px) {
+    #lateral { position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; width: min(var(--lat), 86vw); transform: translateX(-100%); box-shadow: 0 0 30px rgba(0,0,0,.4); background: #14131f; }
+    #app.abierto #lateral { transform: none; }
+    #velo { display: block; position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.55); opacity: 0; pointer-events: none; transition: opacity .3s; }
+    #app.abierto #velo { opacity: 1; pointer-events: auto; }
+  }
+
+  #principal { flex: 1; min-width: 0; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px clamp(14px, 2.4vw, 28px); }
+  .izq, .der { display: flex; align-items: center; gap: 10px; }
+  .redondo { width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--panel); color: var(--text); cursor: pointer; display: grid; place-items: center; transition: background .2s; }
+  .redondo:hover { background: var(--panel2); }
+  .redondo svg { width: 18px; height: 18px; }
+  .marca { display: flex; align-items: center; gap: 10px; font-family: var(--serif); font-weight: 600; font-size: 26px; letter-spacing: -.02em; }
+  .logo { width: 30px; height: 30px; border-radius: 9px; background: url("/praxis.png") center / cover no-repeat var(--indigo); flex: none; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; border: 0; cursor: pointer;
+          font-size: 14px; font-weight: 500; background: var(--panel); color: var(--text); text-decoration: none; transition: background .2s; }
+  .pill:hover { background: var(--panel2); }
+  .pill svg { width: 16px; height: 16px; }
+  #voz-global[aria-pressed="true"] { background: var(--accent); color: #0b0b0c; }
+  @media (max-width: 640px) { .pill .t { display: none; } .pill { padding: 10px 12px; } }
+
+  #chat { flex: 1; overflow-y: auto; scroll-behavior: smooth; }
+  .columna { width: 100%; max-width: 800px; margin: 0 auto; padding: 18px 16px 24px; }
+
+  #bienvenida { text-align: center; padding-top: 7vh; }
+  #bienvenida .logo { width: 64px; height: 64px; border-radius: 20px; margin: 0 auto 10px; }
+  .mano { margin: 0; font-family: var(--mano); font-weight: 700; font-size: 26px; color: var(--accent); transform: rotate(-2deg); display: inline-block; }
+  .titulo-wrap { position: relative; isolation: isolate; width: fit-content; max-width: 100%; margin: 4px auto 10px; }
+  #bienvenida h1 { position: relative; z-index: 1; margin: 0; max-width: 18ch; font-family: var(--serif); font-weight: 400; font-size: clamp(34px, 6vw, 56px); line-height: 1.08; letter-spacing: -.025em; text-wrap: balance; }
+  #bienvenida h1 em { color: var(--accent); font-weight: 600; }
+  .pal { display: inline-block; opacity: 0; transform: translateY(.6em); filter: blur(6px); }
+  .anim-on .pal, .vista .pal { animation: palSube .6s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+  @keyframes palSube { from { opacity: 0; transform: translateY(.6em); filter: blur(6px); } to { opacity: 1; transform: none; filter: blur(0); } }
+  .emoji-fondo { position: absolute; z-index: -1; right: -3%; top: -44%; font-size: clamp(64px, 11vw, 104px); line-height: 1; pointer-events: none; user-select: none; transform-origin: 62% 90%; opacity: 0;
+                 filter: drop-shadow(0 10px 22px rgba(79,70,229,.4));
+                 animation: emojiSaluda 7s linear .9s 1 both; }
+  @keyframes emojiSaluda {
+    0%   { opacity: 0; transform: translateY(80%) scale(.4) rotate(0deg); animation-timing-function: cubic-bezier(.22,1.25,.45,1); }
+    10%  { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); animation-timing-function: ease-in-out; }
+    15%  { transform: translateY(-2%) scale(1) rotate(-6deg); animation-timing-function: ease-in-out; }
+    22%  { transform: translateY(-2%) scale(1) rotate(24deg); animation-timing-function: ease-in-out; }
+    29%  { transform: translateY(-2%) scale(1) rotate(-16deg); animation-timing-function: ease-in-out; }
+    36%  { transform: translateY(-1%) scale(1) rotate(18deg); animation-timing-function: ease-in-out; }
+    43%  { transform: translateY(-1%) scale(1) rotate(-9deg); animation-timing-function: ease-in-out; }
+    49%  { transform: translateY(0) scale(1) rotate(5deg); animation-timing-function: ease-in-out; }
+    55%  { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); animation-timing-function: cubic-bezier(.5,0,.75,.2); }
+    66%  { opacity: 0; transform: translateY(80%) scale(.4) rotate(0deg); }
+    100% { opacity: 0; transform: translateY(80%) scale(.4) rotate(0deg); }
+  }
+  #bienvenida p.sub { margin: 0 auto 28px; color: var(--muted); max-width: 470px; }
+  .sugerencias { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; max-width: 640px; margin: 0 auto; }
+  .sugerencia { text-align: left; padding: 16px 18px; border: 1px solid var(--borde); background: var(--panel); color: var(--text);
+                border-radius: 20px; font-size: 15px; cursor: pointer; display: flex; gap: 12px; align-items: flex-start; transition: transform .2s, border-color .2s; }
+  .sugerencia:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .sugerencia .ic { flex: none; width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: rgba(139,133,255,.16); color: var(--accent); font-size: 18px; }
+  @media (max-width: 560px) { .sugerencias { grid-template-columns: 1fr; } }
+
+  .fila { display: flex; gap: 12px; margin-bottom: 22px; }
+  .fila.anim { animation: aparece .32s ease; }
+  @keyframes aparece { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .fila.user { justify-content: flex-end; }
+  .fila.user .burbuja { background: var(--indigo); padding: 11px 18px; border-radius: 22px 22px 6px 22px; max-width: 86%; }
+  .fila.bot .avatar { flex: none; width: 34px; height: 34px; border-radius: 10px; margin-top: 2px; background: url("/praxis.png") center / cover no-repeat var(--indigo); }
+  .fila.bot .cuerpo { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--borde); padding: 12px 18px; border-radius: 6px 22px 22px 22px; }
+  .burbuja { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .burbuja code { background: rgba(0,0,0,.3); padding: 1px 6px; border-radius: 6px; font-size: .9em; font-family: var(--mono); }
+  .burbuja pre { margin: 10px 0; padding: 12px 14px; background: #0e0d17; border: 1px solid var(--borde); border-radius: 14px; overflow-x: auto; white-space: pre; }
+  .burbuja pre code { background: none; padding: 0; font-size: .88em; }
+  .burbuja a { color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.16); font-size: 13px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acciones { display: flex; gap: 6px; margin-top: 8px; }
+  .voz-btn { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; background: rgba(255,255,255,.08); color: var(--muted); }
+  .voz-btn:hover { color: var(--text); background: rgba(255,255,255,.14); }
+  .voz-btn svg { width: 15px; height: 15px; }
+  .voz-btn.hablando { background: var(--accent); color: #0b0b0c; }
+  details.razon { white-space: normal; margin-bottom: 10px; border: 1px solid var(--borde); border-radius: 14px; background: rgba(0,0,0,.22); padding: 8px 12px; font-size: 14px; }
+  details.razon summary { cursor: pointer; color: var(--muted); }
+  details.razon div { margin-top: 8px; color: var(--muted); white-space: pre-wrap; }
+  .estado { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: 15px; }
+  .puntos { display: inline-flex; gap: 5px; padding: 8px 0; }
+  .puntos span { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: salto 1.2s infinite ease-in-out; }
+  .puntos span:nth-child(2) { animation-delay: .15s; } .puntos span:nth-child(3) { animation-delay: .3s; }
+  @keyframes salto { 0%, 60%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-4px); } }
+
+  .zona-entrada { padding: 6px clamp(12px, 2.4vw, 28px) calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .barra { max-width: 800px; margin: 0 auto 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  #pensar { display: inline-flex; align-items: center; gap: 7px; background: var(--panel); color: var(--muted); border: 1px solid var(--borde); padding: 7px 14px; border-radius: 999px; font-size: 14px; cursor: pointer; }
+  #pensar svg { width: 16px; height: 16px; }
+  #pensar:hover { background: var(--panel2); }
+  #pensar[aria-pressed="true"] { background: rgba(139,133,255,.2); color: var(--accent); border-color: var(--accent); }
+  #lista-adj { display: flex; flex-wrap: wrap; gap: 6px; }
+  .adj { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 999px; background: var(--panel2); font-size: 13px; max-width: 220px; }
+  .adj span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .adj button { flex: none; width: 20px; height: 20px; border: 0; border-radius: 50%; background: rgba(255,255,255,.15); color: #fff; cursor: pointer; line-height: 1; }
+  #formulario { max-width: 800px; margin: 0 auto; display: flex; align-items: flex-end; gap: 6px; background: var(--panel); border: 1px solid var(--borde); border-radius: 28px; padding: 8px 8px 8px 10px; }
+  #formulario:focus-within { border-color: var(--accent); }
+  #texto { flex: 1; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; resize: none; max-height: 180px; padding: 9px 4px; line-height: 1.45; }
+  #texto::placeholder { color: var(--muted); }
+  .ic-btn { flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; transition: background .2s, color .2s; }
+  .ic-btn:hover { background: var(--panel2); color: var(--text); }
+  .ic-btn svg { width: 20px; height: 20px; }
+  #mic.escuchando { background: #e5484d; color: #fff; animation: pulso 1.2s infinite; }
+  @keyframes pulso { 0% { box-shadow: 0 0 0 0 rgba(229,72,77,.6); } 100% { box-shadow: 0 0 0 14px rgba(229,72,77,0); } }
+  #enviar { flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: #fff; color: #0b0b0c; cursor: pointer; display: grid; place-items: center; }
+  #enviar:disabled { opacity: .3; cursor: not-allowed; }
+  #enviar svg { width: 18px; height: 18px; }
+  .nota { text-align: center; color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+  #toast { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 50; background: #fff; color: #0b0b0c; padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity .25s; max-width: 90vw; }
+  #toast.ver { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } #chat { scroll-behavior: auto; } .pal { opacity: 1; transform: none; filter: none; } .emoji-fondo { opacity: .9; } }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <aside id="lateral" aria-label="Historial de conversaciones">
+    <button class="btn-nueva" id="nueva-lateral" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Nueva conversación
+    </button>
+    <a class="btn-juego" href="/juego">
+      <span style="font-size:24px">🔥</span>
+      <span>Modo juego<small>Practica y mantén tu racha</small></span>
+    </a>
+    <div class="titulo-lista">historial</div>
+    <div id="historial"><div id="vacio">Aquí aparecerán tus conversaciones.</div></div>
+    <button class="borrar-todo" id="borrar-todo" type="button">Borrar todo el historial</button>
+    <p class="aviso-inv" id="aviso-inv" hidden>Modo invitado: tus chats se guardan solo en este dispositivo.</p>
+    <div class="usuario">
+      <span class="nombre">__NOMBRE__</span>
+      <button id="salir" type="button">Cerrar sesión</button>
+    </div>
+  </aside>
+  <div id="velo"></div>
+
+  <div id="principal">
+    <header>
+      <div class="izq">
+        <button id="menu" class="redondo" type="button" aria-label="Mostrar u ocultar el historial">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <div class="marca"><div class="logo"></div>Praxis</div>
+      </div>
+      <div class="der">
+        <button id="voz-global" class="pill" type="button" aria-pressed="false" title="Praxis lee sus respuestas en voz alta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+          <span class="t" id="voz-txt">Voz: no</span>
+        </button>
+        <a class="pill" href="/juego"><span>🔥</span><span class="t">Juego</span></a>
+        <a class="pill" href="/"><span class="t">Inicio</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg></a>
+      </div>
+    </header>
+
+    <div id="chat">
+      <div class="columna" id="lista">
+        <div id="bienvenida">
+          <p class="mano">tu tutor de estudio ✎</p>
+          <div class="titulo-wrap">
+            <span class="emoji-fondo" id="emoji-fondo" aria-hidden="true">👋</span>
+            <h1 id="saludo" class="anim-on">¿En qué te ayudo hoy?</h1>
+          </div>
+          <p class="sub">Resolvemos juntos matemáticas y materias de mecatrónica. Te doy pistas, tú llegas al resultado. También puedes hablarme o mandarme un archivo.</p>
+          <div class="sugerencias">
+            <button class="sugerencia" type="button"><span class="ic">⚙</span><span>Revisemos juntos un programa de CNC en código G</span></button>
+            <button class="sugerencia" type="button"><span class="ic">▤</span><span>Necesito ayuda con un programa en ladder para un PLC</span></button>
+            <button class="sugerencia" type="button"><span class="ic">📐</span><span>No entiendo las tolerancias de un plano de dibujo técnico</span></button>
+            <button class="sugerencia" type="button"><span class="ic">∑</span><span>Estoy atascado con un problema de matemáticas</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="zona-entrada">
+      <div class="barra">
+        <button id="pensar" type="button" aria-pressed="false" title="Praxis razona con más calma. Tarda más en responder.">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg>
+          Pensar a fondo
+        </button>
+        <div id="lista-adj"></div>
+      </div>
+      <form id="formulario">
+        <input type="file" id="archivo" multiple hidden accept="image/*,.pdf,.txt,.csv,.json,.md,.py,.js,.c,.cpp,.h,.ino,.xml,.nc,.gcode,.ngc,.tap,.cnc,.st,.scl,.awl,.log,.dxf">
+        <button id="adjuntar" class="ic-btn" type="button" aria-label="Adjuntar archivo" title="Adjuntar imagen, PDF o archivo de texto">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>
+        </button>
+        <textarea id="texto" rows="1" placeholder="Escribe o dicta tu mensaje..." autocomplete="off"></textarea>
+        <button id="mic" class="ic-btn" type="button" aria-label="Dictar por voz" title="Dictar por voz">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>
+        </button>
+        <button id="enviar" type="submit" aria-label="Enviar" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        </button>
+      </form>
+      <p class="nota">Praxis puede equivocarse. Verifica la información importante y, en el taller, la seguridad primero.</p>
+    </div>
+  </div>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+  const INVITADO = __INVITADO__;
+  const LS_CONVS = "praxis_invitado_convs";
+  const $ = (id) => document.getElementById(id);
+  const app = $("app"), chat = $("chat"), lista = $("lista"), formulario = $("formulario"), texto = $("texto"),
+        enviar = $("enviar"), pensar = $("pensar"), bienvenida = $("bienvenida"), historial = $("historial"),
+        vacio = $("vacio"), micBtn = $("mic"), vozGlobal = $("voz-global");
+
+  let convs = [], actual = null, nuevoId = null, ocupado = false, pensando = false, adjuntos = [];
+
+  let tToast;
+  function aviso(t) {
+    const el = $("toast"); el.textContent = t; el.classList.add("ver");
+    clearTimeout(tToast); tToast = setTimeout(() => el.classList.remove("ver"), 3500);
+  }
+
+  function aLogin() { location.href = "/login"; }
+  function persistirLocal() {
+    try { localStorage.setItem(LS_CONVS, JSON.stringify(convs.slice(-40))); } catch (e) {}
+  }
+  async function cargar() {
+    if (INVITADO) {
+      try { convs = JSON.parse(localStorage.getItem(LS_CONVS) || "[]"); } catch (e) { convs = []; }
+      return;
+    }
+    try {
+      const r = await fetch("/api/convs");
+      if (r.status === 401) { aLogin(); return; }
+      const d = await r.json();
+      if (Array.isArray(d)) convs = d;
+    } catch (e) { convs = []; }
+  }
+  function guardar(conv) {
+    if (INVITADO) { persistirLocal(); return; }
+    fetch("/api/convs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(conv) })
+      .then((r) => { if (r.status === 401) aLogin(); }).catch(() => {});
+  }
+
+  function escapar(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function inline(s) {
+    return escapar(s)
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  }
+  function formatear(s) {
+    return s.split("```").map((p, i) =>
+      i % 2 ? "<pre><code>" + escapar(p.replace(/^[A-Za-z0-9_+-]*\n/, "").replace(/\n$/, "")) + "</code></pre>" : inline(p)
+    ).join("");
+  }
+  function htmlBot(contenido, razon) {
+    let h = "";
+    if (razon) h += '<details class="razon"><summary>Ver cómo pensó Praxis</summary><div>' + escapar(razon) + "</div></details>";
+    return h + formatear(contenido);
+  }
+
+  const TTS = "speechSynthesis" in window;
+  let vozActiva = false;
+  try { vozActiva = localStorage.getItem("praxis_voz") === "1"; } catch (e) {}
+  let voces = [];
+  function cargarVoces() { voces = TTS ? speechSynthesis.getVoices() : []; }
+  if (TTS) { cargarVoces(); speechSynthesis.onvoiceschanged = cargarVoces; }
+  function elegirVoz() {
+    return voces.find((v) => /^es[-_]MX/i.test(v.lang)) || voces.find((v) => /^es[-_]US/i.test(v.lang)) ||
+           voces.find((v) => /^es/i.test(v.lang)) || null;
+  }
+  function limpiarParaVoz(s) {
+    return s.replace(/```[\s\S]*?```/g, " Te dejo el código en pantalla. ").replace(/`([^`]+)`/g, "$1")
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/https?:\/\/\S+/g, "")
+            .replace(/[*_#>]/g, "").replace(/\s+/g, " ").trim();
+  }
+  function trozos(t) {
+    const frases = t.match(/[^.!?¿\n:;]+[.!?\n:;]?/g) || [t];
+    const out = []; let acum = "";
+    frases.forEach((f) => { if ((acum + f).length > 180 && acum) { out.push(acum); acum = f; } else acum += f; });
+    if (acum.trim()) out.push(acum);
+    return out;
+  }
+  function callar() {
+    if (TTS) speechSynthesis.cancel();
+    document.querySelectorAll(".voz-btn.hablando").forEach((b) => b.classList.remove("hablando"));
+  }
+  function hablar(plano, btn) {
+    if (!TTS) { aviso("Tu navegador no puede leer en voz alta."); return; }
+    callar();
+    const partes = trozos(limpiarParaVoz(plano));
+    if (!partes.length) return;
+    const voz = elegirVoz();
+    if (btn) btn.classList.add("hablando");
+    partes.forEach((p, i) => {
+      const u = new SpeechSynthesisUtterance(p);
+      u.lang = voz ? voz.lang : "es-MX"; if (voz) u.voice = voz; u.rate = 1.02;
+      if (i === partes.length - 1) { u.onend = u.onerror = () => btn && btn.classList.remove("hablando"); }
+      speechSynthesis.speak(u);
+    });
+  }
+  function pintarVoz() {
+    vozGlobal.setAttribute("aria-pressed", String(vozActiva));
+    $("voz-txt").textContent = vozActiva ? "Voz: sí" : "Voz: no";
+  }
+  vozGlobal.addEventListener("click", () => {
+    vozActiva = !vozActiva;
+    try { localStorage.setItem("praxis_voz", vozActiva ? "1" : "0"); } catch (e) {}
+    if (!vozActiva) callar(); else if (!TTS) aviso("Tu navegador no puede leer en voz alta.");
+    pintarVoz();
+  });
+  pintarVoz();
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, escuchando = false, dictadoFinal = false, baseDictado = "";
+  if (!SR) { micBtn.style.display = "none"; }
+  else {
+    rec = new SR(); rec.lang = "es-MX"; rec.interimResults = true; rec.continuous = false;
+    rec.onstart = () => { escuchando = true; micBtn.classList.add("escuchando"); baseDictado = texto.value.trim() ? texto.value.trim() + " " : ""; };
+    rec.onresult = (e) => {
+      let t = ""; for (const r of e.results) t += r[0].transcript;
+      texto.value = baseDictado + t; autoAltura(); actualizarBoton();
+      if (e.results[e.results.length - 1].isFinal) dictadoFinal = true;
+    };
+    rec.onerror = (e) => { if (e.error === "not-allowed") aviso("Permite el micrófono en tu navegador para dictar."); };
+    rec.onend = () => {
+      escuchando = false; micBtn.classList.remove("escuchando");
+      if (dictadoFinal && vozActiva && texto.value.trim() && !ocupado) formulario.requestSubmit();
+      dictadoFinal = false;
+    };
+    micBtn.addEventListener("click", () => {
+      callar();
+      try { escuchando ? rec.stop() : rec.start(); } catch (e) {}
+    });
+  }
+
+  function bajar() { chat.scrollTop = chat.scrollHeight; }
+  function filaUsuario(t, archivos, animar) {
+    bienvenida.style.display = "none";
+    const fila = document.createElement("div");
+    fila.className = "fila user" + (animar ? " anim" : "");
+    const b = document.createElement("div"); b.className = "burbuja";
+    const tt = document.createElement("div"); tt.textContent = t; b.appendChild(tt);
+    if (archivos && archivos.length) {
+      const c = document.createElement("div"); c.className = "chips";
+      archivos.forEach((n) => { const s = document.createElement("span"); s.className = "chip"; s.textContent = "📎 " + n; c.appendChild(s); });
+      b.appendChild(c);
+    }
+    fila.appendChild(b); lista.appendChild(fila); bajar();
+  }
+  function filaBot(animar) {
+    bienvenida.style.display = "none";
+    const fila = document.createElement("div");
+    fila.className = "fila bot" + (animar ? " anim" : "");
+    const av = document.createElement("div"); av.className = "avatar";
+    const cuerpo = document.createElement("div"); cuerpo.className = "cuerpo";
+    const b = document.createElement("div"); b.className = "burbuja";
+    cuerpo.appendChild(b); fila.appendChild(av); fila.appendChild(cuerpo); lista.appendChild(fila); bajar();
+    return { b, cuerpo };
+  }
+  function rellenarBot(ref, contenido, razon, conAcciones) {
+    ref.b.innerHTML = htmlBot(contenido, razon);
+    if (!conAcciones) return;
+    const ac = document.createElement("div"); ac.className = "acciones";
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "voz-btn";
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>Escuchar';
+    btn.addEventListener("click", () => btn.classList.contains("hablando") ? callar() : hablar(contenido, btn));
+    ac.appendChild(btn); ref.cuerpo.appendChild(ac);
+    return btn;
+  }
+  function limpiarMensajes() { lista.querySelectorAll(".fila").forEach((f) => f.remove()); }
+
+  function renderLista() {
+    historial.querySelectorAll(".item").forEach((i) => i.remove());
+    vacio.style.display = convs.length ? "none" : "";
+    [...convs].sort((a, b) => b.actualizado - a.actualizado).forEach((c) => {
+      const item = document.createElement("div");
+      item.className = "item" + (actual && actual.id === c.id ? " activo" : "") + (c.id === nuevoId ? " nuevo" : "");
+      const ab = document.createElement("button");
+      ab.className = "abrir"; ab.type = "button"; ab.textContent = c.titulo; ab.title = c.titulo;
+      ab.addEventListener("click", () => abrir(c.id));
+      const bo = document.createElement("button");
+      bo.className = "borrar"; bo.type = "button"; bo.textContent = "×"; bo.setAttribute("aria-label", "Eliminar conversación");
+      bo.addEventListener("click", (e) => { e.stopPropagation(); borrar(c.id, item); });
+      item.appendChild(ab); item.appendChild(bo); historial.appendChild(item);
+    });
+    nuevoId = null;
+  }
+  function abrir(id) {
+    if (ocupado) return;
+    const c = convs.find((x) => x.id === id); if (!c) return;
+    actual = c; callar(); limpiarMensajes();
+    c.mensajes.forEach((m) => {
+      if (m.role === "user") filaUsuario(m.content, m.archivos, false);
+      else rellenarBot(filaBot(false), m.content, m.razon, true);
+    });
+    renderLista(); cerrarMovil(); bajar();
+  }
+  function nueva() {
+    if (ocupado) return;
+    actual = null; callar(); limpiarMensajes(); nuevaFrase(); bienvenida.style.display = "";
+    renderLista(); cerrarMovil(); texto.focus();
+  }
+  function borrar(id, item) {
+    if (ocupado) return;
+    item.classList.add("saliendo");
+    setTimeout(() => {
+      convs = convs.filter((c) => c.id !== id);
+      if (INVITADO) persistirLocal(); else fetch("/api/convs/" + encodeURIComponent(id), { method: "DELETE" }).catch(() => {});
+      if (actual && actual.id === id) nueva(); else renderLista();
+    }, 280);
+  }
+
+  function cerrarMovil() { if (window.innerWidth <= 860) app.classList.remove("abierto"); }
+  $("menu").addEventListener("click", () => app.classList.toggle("abierto"));
+  $("velo").addEventListener("click", () => app.classList.remove("abierto"));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarMovil(); });
+  $("borrar-todo").addEventListener("click", () => {
+    if (ocupado || convs.length === 0) return;
+    if (!confirm("¿Borrar todas tus conversaciones? Esta acción no se puede deshacer.")) return;
+    historial.querySelectorAll(".item").forEach((i) => i.classList.add("saliendo"));
+    setTimeout(() => {
+      convs = [];
+      if (INVITADO) persistirLocal(); else fetch("/api/convs", { method: "DELETE" }).catch(() => {});
+      nueva();
+    }, 280);
+  });
+  if (INVITADO) { $("salir").textContent = "Crear cuenta"; $("aviso-inv").hidden = false; }
+  $("salir").addEventListener("click", async () => {
+    if (!INVITADO) { try { await fetch("/api/salir", { method: "POST" }); } catch (e) {} }
+    aLogin();
+  });
+
+  const EXT_TEXTO = /\.(txt|csv|json|md|py|js|c|cpp|h|ino|xml|nc|gcode|ngc|tap|cnc|st|scl|awl|log|dxf)$/i;
+  function leerDataURL(f) {
+    return new Promise((ok, mal) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = mal; r.readAsDataURL(f); });
+  }
+  function leerImagen(f) {
+    return new Promise((ok, mal) => {
+      const url = URL.createObjectURL(f), img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+        const w = Math.round(img.width * k), h = Math.round(img.height * k);
+        const c = document.createElement("canvas"); c.width = w; c.height = h;
+        const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url); ok(c.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = () => mal(new Error("imagen")); img.src = url;
+    });
+  }
+  async function agregarArchivos(files) {
+    for (const f of files) {
+      if (adjuntos.length >= 4) { aviso("Máximo 4 archivos por mensaje."); break; }
+      try {
+        if (f.type.startsWith("image/")) {
+          adjuntos.push({ nombre: f.name, datos: await leerImagen(f) });
+        } else if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
+          if (f.size > 6e6) { aviso("«" + f.name + "» pesa más de 6 MB."); continue; }
+          adjuntos.push({ nombre: f.name, datos: (await leerDataURL(f)).replace(/^data:[^;]*;/, "data:application/pdf;") });
+        } else if (f.size <= 300000 && (f.type.startsWith("text/") || EXT_TEXTO.test(f.name))) {
+          adjuntos.push({ nombre: f.name, texto: await f.text() });
+        } else {
+          aviso("No pude abrir «" + f.name + "». Prueba con imagen, PDF o archivo de texto (máx. 300 KB).");
+        }
+      } catch (e) { aviso("No pude leer «" + f.name + "»."); }
+    }
+    pintarAdjuntos(); actualizarBoton();
+  }
+  function pintarAdjuntos() {
+    const cont = $("lista-adj"); cont.innerHTML = "";
+    adjuntos.forEach((a, i) => {
+      const d = document.createElement("div"); d.className = "adj";
+      const s = document.createElement("span"); s.textContent = "📎 " + a.nombre;
+      const x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", "Quitar archivo");
+      x.addEventListener("click", () => { adjuntos.splice(i, 1); pintarAdjuntos(); actualizarBoton(); });
+      d.appendChild(s); d.appendChild(x); cont.appendChild(d);
+    });
+  }
+  $("adjuntar").addEventListener("click", () => $("archivo").click());
+  $("archivo").addEventListener("change", (e) => { agregarArchivos([...e.target.files]); e.target.value = ""; });
+  texto.addEventListener("paste", (e) => {
+    const imgs = [...(e.clipboardData ? e.clipboardData.files : [])].filter((f) => f.type.startsWith("image/"));
+    if (imgs.length) { e.preventDefault(); agregarArchivos(imgs); }
+  });
+
+  function actualizarBoton() { enviar.disabled = ocupado || (texto.value.trim() === "" && adjuntos.length === 0); }
+  function autoAltura() { texto.style.height = "auto"; texto.style.height = Math.min(texto.scrollHeight, 180) + "px"; }
+
+  async function mandar(pregunta) {
+    const adj = adjuntos.slice();
+    if (!pregunta && adj.length) pregunta = "Revisemos juntos este archivo.";
+    if (!pregunta || ocupado) return;
+    if (escuchando && rec) { try { rec.stop(); } catch (e) {} }
+    callar();
+    ocupado = true; texto.value = ""; adjuntos = []; pintarAdjuntos(); autoAltura(); actualizarBoton();
+
+    if (!actual) {
+      actual = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        titulo: pregunta.length > 40 ? pregunta.slice(0, 40) + "…" : pregunta,
+        mensajes: [], actualizado: Date.now()
+      };
+      convs.push(actual); nuevoId = actual.id;
+    }
+    const conv = actual;
+    const nombres = adj.map((a) => a.nombre);
+    const msg = { role: "user", content: pregunta };
+    if (nombres.length) msg.archivos = nombres;
+    conv.mensajes.push(msg);
+    conv.actualizado = Date.now(); guardar(conv); renderLista();
+
+    filaUsuario(pregunta, nombres, true);
+    const ref = filaBot(true);
+    ref.b.innerHTML = '<span class="estado"><span class="puntos"><span></span><span></span><span></span></span>' +
+                      (pensando ? "Pensando a fondo…" : adj.length ? "Revisando tu archivo…" : "") + "</span>";
+    let respuestaOk = null;
+    try {
+      const r = await fetch("/chat", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mensajes: conv.mensajes.map((m) => ({ role: m.role, content: m.content })),
+          adjuntos: adj, pensar: pensando
+        })
+      });
+      if (r.status === 401) { aLogin(); return; }
+      const datos = await r.json();
+      if (r.ok) {
+        conv.mensajes.push({ role: "assistant", content: datos.respuesta, razon: datos.razonamiento || "" });
+        rellenarBot(ref, datos.respuesta, datos.razonamiento, true);
+        respuestaOk = datos.respuesta;
+      } else {
+        ref.b.textContent = datos.respuesta || "Ocurrió un error. Inténtalo de nuevo.";
+        conv.mensajes.pop();
+      }
+    } catch (error) {
+      ref.b.textContent = "No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.";
+      conv.mensajes.pop();
+    }
+    conv.actualizado = Date.now(); guardar(conv);
+    ocupado = false; renderLista(); actualizarBoton(); bajar();
+    if (respuestaOk && vozActiva) hablar(respuestaOk, ref.cuerpo.querySelector(".voz-btn"));
+    texto.focus();
+  }
+
+  formulario.addEventListener("submit", (e) => { e.preventDefault(); mandar(texto.value.trim()); });
+  texto.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); formulario.requestSubmit(); }
+  });
+  texto.addEventListener("input", () => { autoAltura(); actualizarBoton(); });
+  pensar.addEventListener("click", () => { pensando = !pensando; pensar.setAttribute("aria-pressed", String(pensando)); texto.focus(); });
+  document.querySelectorAll(".sugerencia").forEach((btn) =>
+    btn.addEventListener("click", () => mandar(btn.querySelector("span:last-child").textContent)));
+  $("nueva-lateral").addEventListener("click", nueva);
+
+  const FRASES = [
+    "¿Con qué empezamos?", "¿En qué te ayudo hoy?", "¿Qué vamos a resolver hoy?",
+    "¿Qué estamos construyendo hoy?", "Veamos juntos tu problema.", "¿Qué te gustaría aprender?",
+    "¿Por dónde empezamos?", "Cuenta conmigo.", "Tú lo resuelves, yo te doy la pista.",
+    "Un paso a la vez, tú puedes.", "Cada error es una pista.", "Eres más capaz de lo que crees."
+  ];
+  function animaPalabras(el) {
+    let i = 0;
+    (function recorre(nodo) {
+      [...nodo.childNodes].forEach((n) => {
+        if (n.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          n.textContent.split(/(\s+)/).forEach((p) => {
+            if (!p) return;
+            if (/^\s+$/.test(p)) { frag.appendChild(document.createTextNode(p)); return; }
+            const s = document.createElement("span"); s.className = "pal";
+            s.style.setProperty("--i", Math.min(i++, 14)); s.textContent = p; frag.appendChild(s);
+          });
+          n.replaceWith(frag);
+        } else if (n.nodeType === 1) recorre(n);
+      });
+    })(el);
+  }
+  let ultimaFrase = -1;
+  function nuevaFrase() {
+    let i; do { i = Math.floor(Math.random() * FRASES.length); } while (i === ultimaFrase);
+    ultimaFrase = i;
+    const h = $("saludo"); h.textContent = FRASES[i]; animaPalabras(h);
+    const e = $("emoji-fondo");
+    e.style.animation = "none"; void e.offsetWidth; e.style.animation = "";
+  }
+  nuevaFrase();
+
+  if (window.innerWidth > 860) app.classList.add("abierto");
+  cargar().then(renderLista);
+  try {
+    const pre = sessionStorage.getItem("praxis_prefill");
+    if (pre) { sessionStorage.removeItem("praxis_prefill"); texto.value = pre; autoAltura(); actualizarBoton(); texto.focus(); }
+  } catch (e) {}
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
+</script>
+</body>
+</html>
