@@ -17,7 +17,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# --- Cargar la clave desde el .env ---
 load_dotenv(Path(__file__).parent / ".env", override=True)
 OPENAI_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 client = OpenAI(api_key=OPENAI_KEY)
@@ -54,34 +53,26 @@ LÍMITES: no eres terapeuta ni apoyo emocional. Si la persona habla de emociones
 FORMATO: escribe en texto sencillo, sin LaTeX; usa símbolos como × ÷ √ ² ³ π Ω. Pon el código, G-code o ladder en texto dentro de bloques con triple acento grave. Responde en el idioma de la persona, por defecto en español, con mensajes breves y motivadores.
 """
 
-# --- Solo se busca en estos sitios (universidades, artículos, gobierno, normalización) ---
-# OpenAI solo acepta dominios completos (no "gov" ni "edu" sueltos).
 DOMINIOS_PERMITIDOS = [
-    # Gubernamentales y organismos
     "gob.mx", "inegi.org.mx", "conahcyt.mx", "cenam.mx", "ema.org.mx", "gob.es", "gov.uk",
     "nasa.gov", "nih.gov", "ncbi.nlm.nih.gov", "noaa.gov", "nist.gov",
     "cdc.gov", "nsf.gov", "census.gov", "usgs.gov", "ed.gov",
     "who.int", "un.org", "unesco.org", "europa.eu", "cepal.org",
     "bipm.org", "iso.org", "iec.ch",
-    # Universidades
     "unam.mx", "ipn.mx", "tec.mx", "uanl.mx", "udg.mx", "uam.mx", "colmex.mx",
     "mit.edu", "stanford.edu", "harvard.edu", "berkeley.edu", "yale.edu",
     "princeton.edu", "caltech.edu", "cmu.edu", "ox.ac.uk", "cam.ac.uk",
     "uchile.cl", "uba.ar", "usp.br", "unal.edu.co", "ucm.es", "ub.edu",
-    # Artículos y revistas académicas
     "scielo.org", "redalyc.org", "dialnet.unirioja.es", "scholar.google.com",
     "arxiv.org", "pubmed.ncbi.nlm.nih.gov", "jstor.org", "nature.com",
     "science.org", "sciencedirect.com", "springer.com", "wiley.com",
     "ieee.org", "acm.org", "researchgate.net",
-    # Documentación técnica de fabricantes (PLC, CNC, neumática, control)
     "siemens.com", "festo.com", "ni.com", "mathworks.com", "arduino.cc",
 ]
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 28 * 1024 * 1024   # adjuntos (imágenes, PDF)
+app.config["MAX_CONTENT_LENGTH"] = 28 * 1024 * 1024
 
-# --- Seguridad de las sesiones ---
-# En Render define la variable de entorno SECRET_KEY con un texto largo y aleatorio.
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
 if not SECRET_KEY:
     print("AVISO: define la variable de entorno SECRET_KEY (ver instrucciones).")
@@ -93,11 +84,10 @@ app.config.update(
     SECRET_KEY=SECRET_KEY,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=bool(os.getenv("RENDER")),   # solo https en Render
+    SESSION_COOKIE_SECURE=bool(os.getenv("RENDER")),
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
 )
 
-# --- Base de datos ---
 uri = os.getenv("DATABASE_URL", "").strip()
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
@@ -135,16 +125,14 @@ class Progreso(db.Model):
 with app.app_context():
     try:
         db.create_all()
-    except Exception as error:   # por si dos procesos crean las tablas a la vez
+    except Exception as error:
         print("create_all:", error)
 
 
-# --- Plantillas HTML (archivos junto a main.py) ---
 def plantilla(nombre):
     return (Path(__file__).parent / nombre).read_text(encoding="utf-8")
 
 
-# --- Utilidades de sesión ---
 def usuario_actual():
     uid = session.get("uid")
     return db.session.get(Usuario, uid) if uid else None
@@ -174,7 +162,6 @@ def acceso_api(f):
     return envoltura
 
 
-# Límite sencillo de intentos (en memoria)
 _INTENTOS = {}
 
 def _ip():
@@ -192,12 +179,11 @@ def registrar_intento(clave):
 
 @app.after_request
 def sin_cache(resp):
-    if not request.path.startswith("/static"):
+    if not request.path.startswith("/static") and request.path.lstrip("/") not in IMAGENES:
         resp.headers["Cache-Control"] = "no-store"
     return resp
 
 
-# --- Rutas de páginas ---
 @app.route("/")
 def inicio():
     u = usuario_actual()
@@ -246,7 +232,6 @@ def entrar_invitado():
     return redirect("/app")
 
 
-# --- Cuentas: registro, entrada y salida ---
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 def _iniciar_sesion(usuario):
@@ -311,7 +296,6 @@ def api_salir():
     return jsonify(ok=True)
 
 
-# --- Historial de conversaciones (guardado por cuenta) ---
 ID_RE = re.compile(r"^[a-z0-9]{4,40}$")
 MAX_CONVERSACIONES = 200
 
@@ -387,7 +371,6 @@ def borrar_todas():
     return jsonify(ok=True)
 
 
-# --- IA ---
 def consultar(mensajes, pensar, con_resumen):
     """Llama a OpenAI. 'pensar' sube el esfuerzo de razonamiento."""
     razonamiento = {"effort": "high" if pensar else "low"}
@@ -416,7 +399,6 @@ def extraer_razonamiento(r):
     return "\n\n".join(partes)
 
 
-# Adjuntos: imágenes y PDF viajan como data URL; los archivos de texto como texto
 PREFIJOS_IMG = ("data:image/png;base64,", "data:image/jpeg;base64,",
                 "data:image/webp;base64,", "data:image/gif;base64,")
 PREFIJO_PDF = "data:application/pdf;base64,"
@@ -449,7 +431,6 @@ def chat():
     datos = request.get_json(silent=True) or {}
     pensar = bool(datos.get("pensar"))
 
-    # Límite de uso: más estricto para invitados (cuida el costo de la IA)
     if usuario_actual():
         clave_limite, maximo, ventana = "chat:u%s" % session["uid"], 40, 600
     else:
@@ -489,11 +470,7 @@ def chat():
         return jsonify(respuesta="Ocurrió un error al contactar a la IA. Inténtalo de nuevo en un momento."), 500
 
 
-# --- Modo juego: banco de preguntas ---
-# Formato: (categoría, pregunta, [correcta, errónea, errónea, errónea], explicación)
-# La respuesta correcta va siempre primero; el servidor mezcla las opciones.
 BANCO = [
-    # Matemáticas
     ("Matemáticas", "Resuelve: 3x − 7 = 11", ["x = 6", "x = 4", "x = 18", "x = −6"],
      "Sumamos 7 a ambos lados: 3x = 18. Dividimos entre 3 y queda x = 6."),
     ("Matemáticas", "¿Cuál es la derivada de f(x) = x³ + 2x?", ["3x² + 2", "x² + 2", "3x³ + 2", "3x² + 2x"],
@@ -506,7 +483,6 @@ BANCO = [
      "180° = π rad, así que 90° es la mitad: π/2."),
     ("Matemáticas", "¿Cuánto es la integral de 2x dx?", ["x² + C", "2x² + C", "x + C", "2 + C"],
      "Sumamos 1 al exponente y dividimos: ∫2x dx = 2·x²/2 = x² + C."),
-    # Metrología
     ("Metrología", "Un vernier tiene un nonio de 20 divisiones que abarca 19 mm de la escala. ¿Cuál es su resolución?",
      ["0.05 mm", "0.1 mm", "0.02 mm", "0.5 mm"], "Resolución = 1 mm ÷ 20 divisiones = 0.05 mm."),
     ("Metrología", "¿Qué resolución tiene normalmente un micrómetro de exteriores milimétrico estándar?",
@@ -524,7 +500,6 @@ BANCO = [
      ["Servir de referencia de longitud para calibrar y ajustar instrumentos", "Cortar piezas con precisión",
       "Medir temperatura", "Sujetar piezas en la fresadora"],
      "Son patrones de longitud de muy alta exactitud que sirven para verificar calibres, micrómetros y comparadores."),
-    # Dibujo técnico
     ("Dibujo técnico", "En un plano, la línea continua gruesa representa…",
      ["Contornos y aristas visibles", "Ejes de simetría", "Aristas ocultas", "Líneas de cota"],
      "La línea continua gruesa dibuja lo que se ve de la pieza. Las ocultas son discontinuas y los ejes son de trazo y punto."),
@@ -542,7 +517,6 @@ BANCO = [
     ("Dibujo técnico", "El rayado a 45° en una vista en corte sirve para…",
      ["Mostrar el material que cortó el plano de corte", "Indicar agujeros ocultos", "Marcar la rugosidad", "Señalar el eje de simetría"],
      "El rayado muestra las zonas de material que se cortaron al imaginar el plano de corte."),
-    # PLC
     ("PLC", "En ladder, un contacto normalmente abierto (NA) deja pasar la señal cuando…",
      ["Su bit asociado vale 1", "Su bit asociado vale 0", "El PLC está apagado", "La bobina está desenergizada siempre"],
      "El contacto NA se cierra (conduce) cuando el bit que lo gobierna está en 1."),
@@ -564,7 +538,6 @@ BANCO = [
      ["Leer entradas → ejecutar programa → actualizar salidas", "Ejecutar programa → leer entradas → actualizar salidas",
       "Actualizar salidas → leer entradas → ejecutar programa", "Leer salidas → apagar → encender"],
      "Primero se congela la imagen de las entradas, luego se corre el programa y al final se escriben las salidas."),
-    # CNC
     ("CNC", "¿Qué hace el código G01?",
      ["Interpolación lineal con avance programado", "Movimiento rápido sin cortar", "Interpolación circular horaria", "Ciclo de taladrado"],
      "G01 mueve en línea recta a la velocidad de avance F. G00 es el movimiento rápido."),
@@ -583,7 +556,6 @@ BANCO = [
      ["300 mm/min", "75 mm/min", "30 mm/min", "3000 mm/min"], "F = 0.05 × 4 × 1500 = 300 mm/min."),
     ("CNC", "G90 programa las posiciones en…", ["Coordenadas absolutas", "Coordenadas incrementales", "Pulgadas", "Coordenadas polares"],
      "G90 = absoluto (respecto al cero) y G91 = incremental (respecto a la posición actual)."),
-    # Electrónica
     ("Electrónica", "Con V = 12 V y R = 4 Ω, ¿cuánta corriente circula?", ["3 A", "48 A", "0.33 A", "8 A"],
      "Ley de Ohm: I = V ÷ R = 12 ÷ 4 = 3 A."),
     ("Electrónica", "Dos resistencias de 100 Ω en paralelo equivalen a…", ["50 Ω", "200 Ω", "100 Ω", "25 Ω"],
@@ -597,7 +569,6 @@ BANCO = [
     ("Electrónica", "¿Para qué se pone una resistencia en serie con un LED?",
      ["Para limitar la corriente y no quemarlo", "Para que brille más", "Para convertir a corriente alterna", "Para aumentar el voltaje"],
      "El LED no limita su propia corriente; la resistencia la controla."),
-    # Neumática e hidráulica
     ("Neumática e hidráulica", "En una válvula 5/2, ¿qué significan los números?",
      ["5 vías y 2 posiciones", "5 posiciones y 2 vías", "5 bar y 2 bar", "5 cilindros y 2 sensores"],
      "El primer número son las vías (conexiones) y el segundo las posiciones de la válvula."),
@@ -610,7 +581,6 @@ BANCO = [
      ["La presión en un fluido confinado se transmite por igual en todas direcciones", "El caudal siempre es constante",
       "La presión baja al aumentar el área", "Los líquidos se comprimen mucho"],
      "Es la base de los gatos y prensas hidráulicas."),
-    # Control y robótica
     ("Control y robótica", "Un sensor inductivo detecta…",
      ["Objetos metálicos sin tocarlos", "Cualquier material transparente", "Humedad", "Sonido"],
      "Genera un campo electromagnético que se altera con metales cercanos."),
@@ -625,7 +595,6 @@ BANCO = [
     ("Control y robótica", "Un brazo robótico con 6 articulaciones rotativas independientes tiene…",
      ["6 grados de libertad", "3 grados de libertad", "12 grados de libertad", "1 grado de libertad"],
      "Cada articulación independiente aporta un grado de libertad."),
-    # Mecánica
     ("Mecánica", "Con una fuerza de 50 N a 0.2 m del eje, ¿qué torque se genera (T = F × d)?",
      ["10 N·m", "250 N·m", "0.004 N·m", "100 N·m"], "T = 50 × 0.2 = 10 N·m."),
     ("Mecánica", "Un piñón de 20 dientes gira a 900 rpm y mueve una rueda de 60 dientes. ¿A cuántas rpm gira la rueda?",
@@ -669,7 +638,6 @@ def juego_preguntas():
     return jsonify([_pregunta_publica(b) for b in random.sample(pool, min(n, len(pool)))])
 
 
-# --- Modo juego: racha y puntos (hora de México, UTC−6) ---
 ZONA = timezone(timedelta(hours=-6))
 
 def hoy_iso(atras=0):
@@ -724,11 +692,24 @@ def terminar_leccion():
     return jsonify(vista_progreso(p))
 
 
+IMAGENES = {"praxis.png", "icon-192.png", "icon-512.png", "icon-maskable-512.png"}
+BASE = Path(__file__).parent
+
+@app.route("/<nombre>")
+def imagen_suelta(nombre):
+    if nombre not in IMAGENES:
+        return jsonify(error="No encontrado."), 404
+    carpeta = BASE if (BASE / nombre).exists() else BASE / "static"
+    if not (carpeta / nombre).exists():
+        return jsonify(error="No encontrado."), 404
+    resp = send_from_directory(carpeta, nombre, mimetype="image/png")
+    resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
+
+
 @app.route("/favicon.ico")
 def favicon():
-    return send_from_directory(
-        Path(__file__).parent / "static", "praxis.png", mimetype="image/png"
-    )
+    return imagen_suelta("praxis.png")
 
 
 @app.route("/manifest.json")
@@ -741,8 +722,9 @@ def manifest():
         background_color="#14131f",
         theme_color="#14131f",
         icons=[
-            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
-            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"},
+            {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"},
+            {"src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
         ],
     )
 
