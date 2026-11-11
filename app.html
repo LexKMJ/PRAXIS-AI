@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script>try{var t=sessionStorage.getItem("praxis_trans");if(t){document.documentElement.setAttribute("data-ent",t);document.documentElement.style.setProperty("--t0",".4s");sessionStorage.removeItem("praxis_trans")}}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Praxis</title>
 <link rel="manifest" href="/manifest.json">
@@ -192,6 +193,12 @@
   .nota { text-align: center; color: var(--muted); font-size: 12px; margin: 8px 0 0; }
   #toast { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 50; background: #fff; color: #0b0b0c; padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity .25s; max-width: 90vw; }
   #toast.ver { opacity: 1; }
+  html, body { overflow-x: hidden; }
+  html[data-ent="izq"] #app { animation: slideDesdeDer .5s cubic-bezier(.2,.85,.25,1) backwards; }
+  html[data-ent="der"] #app { animation: slideDesdeIzq .5s cubic-bezier(.2,.85,.25,1) backwards; }
+  @keyframes slideDesdeDer { from { transform: translateX(100%); } to { transform: none; } }
+  @keyframes slideDesdeIzq { from { transform: translateX(-100%); } to { transform: none; } }
+  #app.sale-izq { transform: translateX(-100%); transition: transform .45s cubic-bezier(.6,0,.9,.4); }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } #chat { scroll-behavior: auto; } .pal { opacity: 1; transform: none; filter: none; } .emoji-fondo { opacity: .9; } }
 </style>
 </head>
@@ -665,6 +672,14 @@
   }
   nuevaFrase();
 
+  const sinMov = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.querySelectorAll('a[href="/juego"]').forEach((a) => a.addEventListener("click", (e) => {
+    if (sinMov || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+    e.preventDefault(); callar();
+    try { sessionStorage.setItem("praxis_trans", "izq"); } catch (x) {}
+    app.classList.add("sale-izq");
+    setTimeout(() => { location.href = "/juego"; }, 430);
+  }));
   if (window.innerWidth > 860) app.classList.add("abierto");
   cargar().then(renderLista);
   try {
