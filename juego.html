@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script>try{var t=sessionStorage.getItem("praxis_trans");if(t){document.documentElement.setAttribute("data-ent",t);document.documentElement.style.setProperty("--t0",".4s");sessionStorage.removeItem("praxis_trans")}}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Praxis · Refuerza tus conocimientos</title>
 <link rel="icon" href="/praxis.png">
@@ -117,9 +118,9 @@
   .acciones-final { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 26px; }
 
   .pal { display: inline-block; opacity: 0; transform: translateY(.6em); filter: blur(6px); }
-  .anim-on .pal { animation: palConv .9s cubic-bezier(.2,.85,.25,1) both; animation-delay: calc(var(--i, 0) * 45ms + .15s); }
+  .anim-on .pal { animation: palConv .9s cubic-bezier(.2,.85,.25,1) both; animation-delay: calc(var(--i, 0) * 45ms + .15s + var(--t0, 0s)); }
   @keyframes palConv { from { opacity: 0; transform: translateX(var(--px, 0)) scale(.8); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
-  .cv { animation: converge .95s cubic-bezier(.2,.85,.25,1) backwards; animation-delay: var(--d, 0s); }
+  .cv { animation: converge .95s cubic-bezier(.2,.85,.25,1) backwards; animation-delay: calc(var(--d, 0s) + var(--t0, 0s)); }
   @keyframes converge { from { opacity: 0; transform: translate(var(--x, 0px), var(--y, 0px)) scale(.9); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
 
   .cj { padding: 18px; border-radius: 28px; background: var(--panel); border: 1px solid var(--borde); }
@@ -144,6 +145,12 @@
   #cj-mic.escuchando { background: #e5484d; color: #fff; }
   #cj-enviar { background: #fff; color: #0b0b0c; font-weight: 700; } #cj-enviar:disabled { opacity: .3; cursor: not-allowed; }
   .o-sep { text-align: center; color: var(--muted); font-size: 14px; margin: 18px 0 -6px; }
+  html, body { overflow-x: hidden; }
+  html[data-ent="izq"] .envoltura { animation: slideDesdeDer .5s cubic-bezier(.2,.85,.25,1) backwards; }
+  html[data-ent="der"] .envoltura { animation: slideDesdeIzq .5s cubic-bezier(.2,.85,.25,1) backwards; }
+  @keyframes slideDesdeDer { from { transform: translateX(100%); } to { transform: none; } }
+  @keyframes slideDesdeIzq { from { transform: translateX(-100%); } to { transform: none; } }
+  .envoltura.sale-der { transform: translateX(100%); transition: transform .45s cubic-bezier(.6,0,.9,.4); }
   @media (prefers-reduced-motion: reduce) { .pal { opacity: 1; transform: none; filter: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -251,6 +258,19 @@
   const $ = (id) => document.getElementById(id);
   const LS = "praxis_progreso";
   const VIDAS = 5, POR_LECCION = 8;
+  const sinMov = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function salirA(url) {
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    if (sinMov) { location.href = url; return; }
+    try { sessionStorage.setItem("praxis_trans", "der"); } catch (x) {}
+    document.querySelector(".envoltura").classList.add("sale-der");
+    setTimeout(() => { location.href = url; }, 430);
+  }
+  document.querySelectorAll('a[href="/app"]').forEach((a) => a.addEventListener("click", (e) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+    e.preventDefault(); salirA("/app");
+  }));
+
   function animaPalabras(el) {
     let i = 0;
     (function recorre(nodo) {
@@ -545,7 +565,7 @@
       const bt = document.createElement("button"); bt.type = "button"; bt.textContent = "Verlo con Praxis";
       bt.addEventListener("click", () => {
         try { sessionStorage.setItem("praxis_prefill", "Fallé esta pregunta del juego: «" + er.p.q + "». Respondí «" + er.tuya + "». Veámosla juntos paso a paso, sin darme la respuesta de golpe."); } catch (e) {}
-        location.href = "/app";
+        salirA("/app");
       });
       c.appendChild(h); c.appendChild(a); c.appendChild(b); c.appendChild(p); c.appendChild(bt); fallos.appendChild(c);
     });
