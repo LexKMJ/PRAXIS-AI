@@ -117,8 +117,10 @@
   .acciones-final { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 26px; }
 
   .pal { display: inline-block; opacity: 0; transform: translateY(.6em); filter: blur(6px); }
-  .anim-on .pal { animation: palSube .6s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 70ms); }
-  @keyframes palSube { from { opacity: 0; transform: translateY(.6em); filter: blur(6px); } to { opacity: 1; transform: none; filter: blur(0); } }
+  .anim-on .pal { animation: palConv .9s cubic-bezier(.2,.85,.25,1) both; animation-delay: calc(var(--i, 0) * 45ms + .15s); }
+  @keyframes palConv { from { opacity: 0; transform: translateX(var(--px, 0)) scale(.8); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
+  .cv { animation: converge .95s cubic-bezier(.2,.85,.25,1) backwards; animation-delay: var(--d, 0s); }
+  @keyframes converge { from { opacity: 0; transform: translate(var(--x, 0px), var(--y, 0px)) scale(.9); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
 
   .cj { padding: 18px; border-radius: 28px; background: var(--panel); border: 1px solid var(--borde); }
   .cj-msgs { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding: 2px 2px 8px; }
@@ -267,6 +269,24 @@
     })(el);
   }
   animaPalabras($("titulo-juego"));
+  (function () {
+    const ps = [...document.querySelectorAll("#titulo-juego .pal")], N = ps.length;
+    ps.forEach((p, k) => p.style.setProperty("--px", Math.round((k + .5 - N / 2) * 90) + "px"));
+  })();
+  function converge(el, x, y, d) {
+    if (!el) return;
+    el.classList.add("cv");
+    el.style.setProperty("--x", x + "px"); el.style.setProperty("--y", y + "px"); el.style.setProperty("--d", d + "s");
+  }
+  converge(document.querySelector("#inicio nav"), 0, -60, 0);
+  converge(document.querySelector("#inicio .hero .mano"), 0, -50, .1);
+  converge(document.querySelector("#inicio .hero p.sub"), 0, 40, .5);
+  converge(document.querySelector("#inicio .racha"), -160, 0, .55);
+  document.querySelectorAll("#inicio h2.sec").forEach((h, k) => converge(h, k % 2 ? 120 : -120, 0, .7));
+  converge(document.querySelector("#inicio .cj"), 160, 0, .75);
+  converge(document.querySelector("#inicio .o-sep"), 0, 30, .9);
+  converge(document.querySelector("#inicio .empezar"), 0, 70, 1.1);
+  converge(document.querySelector("#aviso-inv"), 0, 50, 1.2);
 
 
   const iso = (d) => { const z = (n) => String(n).padStart(2, "0"); return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate()); };
@@ -347,13 +367,14 @@
     const total = cats.reduce((n, c) => n + c.total, 0);
     const lista = [{ nombre: "Todas", total }].concat(cats);
     const cont = $("cats"); cont.innerHTML = "";
-    lista.forEach((c) => {
+    lista.forEach((c, k) => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "cat" + (c.nombre === categoria ? " sel" : "");
       b.innerHTML = "";
       b.appendChild(document.createTextNode(c.nombre === "Todas" ? "🎲 Todas mezcladas" : c.nombre));
       const s = document.createElement("small"); s.textContent = c.total + " preguntas"; b.appendChild(s);
       b.addEventListener("click", () => { categoria = c.nombre; cont.querySelectorAll(".cat").forEach((x) => x.classList.remove("sel")); b.classList.add("sel"); });
+      converge(b, k % 2 ? 140 : -140, 0, .9 + k * .06);
       cont.appendChild(b);
     });
   }
