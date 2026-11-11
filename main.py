@@ -22,7 +22,7 @@ load_dotenv(Path(__file__).parent / ".env", override=True)
 OPENAI_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 client = OpenAI(api_key=OPENAI_KEY)
 
-MODELO = "gpt-5-mini"
+MODELO = "gpt-6-luna"
 
 INSTRUCCIONES = """
 Eres Praxis, un tutor de estudio con IA creado por el equipo POLARIS. Acompañas a estudiantes de preparatoria técnica e ingeniería, con especial fuerza en Mecatrónica. Eres cercano, paciente y trabajas como un compañero de equipo, no como un examinador.
