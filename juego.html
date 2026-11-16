@@ -260,7 +260,7 @@
   const VIDAS = 5, POR_LECCION = 8;
   const sinMov = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function salirA(url) {
-    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    callarVoz();
     if (sinMov) { location.href = url; return; }
     try { sessionStorage.setItem("praxis_trans", "der"); } catch (x) {}
     document.querySelector(".envoltura").classList.add("sale-der");
@@ -368,14 +368,87 @@
   }
   const sonBien = () => tono([[660, 0.12], [880, 0.18]]), sonMal = () => tono([[300, 0.18], [220, 0.26]]), sonFin = () => tono([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.3]]);
 
-  function leer(t) {
+
+  /* ---- Voz de Praxis: la genera el servidor (/api/voz), así suena igual en PC, Android y PWA.
+     Si el servidor falla, se usa la voz del navegador como respaldo. ---- */
+  const VozIA = (function () {
+    const audio = new Audio();
+    audio.preload = "auto";
+    const SILENCIO = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+    let token = 0, resolver = null, desbloqueado = false;
+    function desbloquear() {
+      if (desbloqueado) return;
+      desbloqueado = true;
+      try { audio.src = SILENCIO; const p = audio.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+    }
+    ["pointerdown", "keydown", "touchstart"].forEach((ev) => document.addEventListener(ev, desbloquear, { capture: true, once: true }));
+
+    function trozos(t) {
+      const frases = t.match(/[^.!?¿\n:;]+[.!?\n:;]?/g) || [t];
+      const out = []; let acum = "";
+      frases.forEach((f) => { if ((acum + f).length > 450 && acum) { out.push(acum); acum = f; } else acum += f; });
+      if (acum.trim()) out.push(acum);
+      return out;
+    }
+    function pedir(texto) {
+      return fetch("/api/voz", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texto }) })
+        .then((r) => { if (!r.ok) throw new Error("voz " + r.status); return r.blob(); })
+        .then((b) => URL.createObjectURL(b));
+    }
+    function sonar(url) {
+      return new Promise((res) => {
+        resolver = res;
+        audio.onended = () => res(true);
+        audio.onerror = () => res(false);
+        audio.src = url;
+        const p = audio.play();
+        if (p && p.catch) p.catch(() => res(false));
+      });
+    }
+    function parar() {
+      token++;
+      try { audio.pause(); } catch (e) {}
+      if (resolver) { const r = resolver; resolver = null; r(false); }
+    }
+    async function decir(texto, fin, fallo) {
+      parar();
+      const mi = token;
+      const partes = trozos(String(texto || "").trim());
+      if (!partes.length) { if (fin) fin(); return; }
+      const cola = [];
+      const pide = (i) => { if (i < partes.length && !cola[i]) { cola[i] = pedir(partes[i]); cola[i].catch(() => {}); } };
+      pide(0);
+      for (let i = 0; i < partes.length; i++) {
+        pide(i + 1);
+        let url;
+        try { url = await cola[i]; } catch (e) {
+          if (mi !== token) return;
+          if (i === 0) { if (fallo) fallo(); } else if (fin) fin();
+          return;
+        }
+        if (mi !== token) { URL.revokeObjectURL(url); return; }
+        const bien = await sonar(url);
+        URL.revokeObjectURL(url);
+        if (mi !== token) return;
+        if (!bien) { if (i === 0) { if (fallo) fallo(); } else if (fin) fin(); return; }
+      }
+      if (fin) fin();
+    }
+    return { decir, parar };
+  })();
+
+  function callarVoz() { VozIA.parar(); if ("speechSynthesis" in window) speechSynthesis.cancel(); }
+  function leerNavegador(t) {   // respaldo si el servidor no responde
     if (!("speechSynthesis" in window)) return;
-    speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(t);
     const v = speechSynthesis.getVoices();
     const voz = v.find((x) => /^es[-_]MX/i.test(x.lang)) || v.find((x) => /^es/i.test(x.lang));
     u.lang = voz ? voz.lang : "es-MX"; if (voz) u.voice = voz;
     speechSynthesis.speak(u);
+  }
+  function leer(t) {
+    callarVoz();
+    VozIA.decir(t, null, () => leerNavegador(t));
   }
 
   function ver(id) { ["inicio", "leccion", "final"].forEach((s) => $(s).hidden = s !== id); window.scrollTo(0, 0); }
@@ -534,10 +607,10 @@
     if (e.key === "Enter" && !$("accion").disabled) { e.preventDefault(); $("accion").click(); }
   });
   $("oir").addEventListener("click", () => leer(preguntas[idx].q + ". " + preguntas[idx].opciones.map((o, i) => "Opción " + (i + 1) + ": " + o).join(". ")));
-  $("salir").addEventListener("click", () => { if (confirm("¿Salir? Perderás el avance de esta lección.")) { if ("speechSynthesis" in window) speechSynthesis.cancel(); ver("inicio"); } });
+  $("salir").addEventListener("click", () => { if (confirm("¿Salir? Perderás el avance de esta lección.")) { callarVoz(); ver("inicio"); } });
 
   async function terminar() {
-    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    callarVoz();
     const total = idx + 1;
     const antes = prog;
     const nuevo = await guardarLeccion(aciertos, total);
