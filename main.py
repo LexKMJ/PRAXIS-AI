@@ -2,6 +2,7 @@ import os
 import re
 import json
 import time
+from collections import OrderedDict
 import html
 import random
 import hashlib
@@ -468,6 +469,67 @@ def chat():
     except Exception as error:
         print("Error con OpenAI:", error)
         return jsonify(respuesta="Ocurrió un error al contactar a la IA. Inténtalo de nuevo en un momento."), 500
+
+
+# ---------------------------------------------------------------------------
+# VOZ DE PRAXIS: se genera en el servidor, así suena IGUAL en PC, Android y PWA.
+# Puedes cambiarla con variables de entorno (sin tocar el código):
+#   VOZ_MODELO  (por defecto gpt-4o-mini-tts)   VOZ_VOZ  (por defecto coral)
+# Voces femeninas que suenan bien en español: coral, nova, shimmer, sage.
+# ---------------------------------------------------------------------------
+VOZ_MODELO = os.getenv("VOZ_MODELO", "gpt-4o-mini-tts").strip()
+VOZ_VOZ = os.getenv("VOZ_VOZ", "coral").strip()
+VOZ_ESTILO = ("Habla en español de México con voz femenina, cálida, natural y expresiva, como una tutora amable y paciente. "
+              "Ritmo tranquilo y claro, sin sonar robótica. Pronuncia bien los números, las fórmulas y las siglas (PLC, CNC, ISO).")
+_CACHE_VOZ = OrderedDict()
+_CACHE_VOZ_MAX = 60
+
+_SIMBOLOS_VOZ = [("×", " por "), ("÷", " entre "), ("−", " menos "), ("≈", " aproximadamente "), ("→", ", "),
+                 ("Ω", " ohmios"), ("²", " al cuadrado"), ("³", " al cubo"), ("π", " pi "), ("√", " raíz de "),
+                 ("°", " grados"), ("%", " por ciento"), ("=", " igual a "), ("+", " más "), ("≥", " mayor o igual que "),
+                 ("≤", " menor o igual que ")]
+
+def limpiar_para_voz(t):
+    """Quita formato y traduce símbolos para que se lean de forma natural."""
+    t = re.sub(r"```[\s\S]*?```", " El código te lo dejo en pantalla. ", str(t))
+    t = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", t)
+    t = re.sub(r"https?://\S+", "", t)
+    t = re.sub(r"[`*_#>~|]", "", t)
+    for a, b in _SIMBOLOS_VOZ:
+        t = t.replace(a, b)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+@app.route("/api/voz", methods=["POST"])
+@acceso_api
+def api_voz():
+    invitado = es_invitado()
+    clave = "voz:" + (_ip() if invitado else "u" + str(session["uid"]))
+    d = request.get_json(silent=True) or {}
+    texto = limpiar_para_voz(d.get("texto", ""))[:900]
+    if not texto:
+        return jsonify(error="No hay texto para leer."), 400
+
+    llave = hashlib.sha256((VOZ_MODELO + "|" + VOZ_VOZ + "|" + texto).encode("utf-8")).hexdigest()
+    audio = _CACHE_VOZ.get(llave)
+    if audio is None:
+        if demasiados_intentos(clave, 80 if invitado else 400, 3600):
+            return jsonify(error="Se acabó el tiempo de voz por ahora. Inténtalo más tarde."), 429
+        registrar_intento(clave)       # solo cuentan las llamadas reales a OpenAI
+        try:
+            kwargs = dict(model=VOZ_MODELO, voice=VOZ_VOZ, input=texto, response_format="mp3")
+            if "gpt-4o" in VOZ_MODELO:  # solo estos modelos aceptan indicaciones de estilo
+                kwargs["instructions"] = VOZ_ESTILO
+            audio = client.audio.speech.create(**kwargs).content
+        except Exception as error:
+            print("Error generando voz:", error)
+            return jsonify(error="No pude generar la voz ahora."), 502
+        _CACHE_VOZ[llave] = audio
+        while len(_CACHE_VOZ) > _CACHE_VOZ_MAX:
+            _CACHE_VOZ.popitem(last=False)
+    else:
+        _CACHE_VOZ.move_to_end(llave)
+    return Response(audio, mimetype="audio/mpeg")
 
 
 BANCO = [
